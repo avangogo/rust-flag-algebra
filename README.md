@@ -1,9 +1,6 @@
 # flag-algebra
 
-An implementation of
-[flag algebras](http://people.cs.uchicago.edu/~razborov/files/flag.pdf).
-
-
+An implementation of Flag algebras.
 
 ## Example
 
