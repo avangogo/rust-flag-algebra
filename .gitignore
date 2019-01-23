@@ -1,0 +1,8 @@
+/target/
+**/*.rs.bk
+*#
+*~
+*.sdpa
+Cargo.lock
+target/*
+data/*

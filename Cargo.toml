@@ -1,0 +1,26 @@
+[package]
+name = "flag-algebra"
+version = "0.1.0"
+authors = ["Rémi de Verclos <r.deverclos@math.ru.nl>"]
+description = "An implementation of Razborov's flag algebras"
+publish = true
+edition = "2018"
+documentation = "https://docs.rs/flag-algebra"
+repository = "https://github.com/avangogo/rust-flag-algebra"
+license = "GPL-3.0"
+keywords = ["flag", "algebra", "graph", "combinatorics"]
+
+[dependencies]
+num = "0.2.0"
+sprs = "0.6.3"
+ndarray = "0.12.1"
+find_folder = "0.3.0"
+rand = "0.6.4"
+serde_json = "1.0.36"
+serde = "1.0.85"
+serde_derive = "1.0.85"
+bincode = "1.0.1"
+canonical-form = "0.5.0"
+
+[profile.release]
+debug = true
