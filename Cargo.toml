@@ -1,10 +1,11 @@
 [package]
 name = "flag-algebra"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Rémi de Verclos <r.deverclos@math.ru.nl>"]
 description = "An implementation of Razborov's flag algebras"
 publish = true
 edition = "2018"
+readme = "README.md"
 documentation = "https://docs.rs/flag-algebra"
 repository = "https://github.com/avangogo/rust-flag-algebra"
 license = "GPL-3.0"
