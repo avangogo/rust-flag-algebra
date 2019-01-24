@@ -14,6 +14,7 @@ use sprs::CsMat;
 use std::error::Error;
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use std::fs;
 use std::fs::File;
 use std::io::{stdout, BufReader, BufWriter, Write};
 use std::marker::PhantomData;
@@ -45,7 +46,7 @@ where
     }
     /// (Re)create the object, save it in the corresponding file and return it.
     fn create_and_save(&self, path: &Path) -> A {
-        println!("Creating {:?}", path);
+        println!("Creating {}", path.display());
         let value = self.create();
         let file = File::create(path).unwrap();
         let buf = BufWriter::new(file);
@@ -64,7 +65,7 @@ where
     fn get(&self) -> A {
         let path = self.file_path();
         if path.exists() {
-            print!("Loading {:?}", path);
+            print!("Loading {}", path.display());
             stdout().flush().unwrap();
             match self.load(&path) {
                 Ok(v) => {
@@ -73,12 +74,21 @@ where
                 }
                 Err(e) => {
                     println!(" failed");
-                    println!("Error: {}", e);
+                    eprintln!("Error: {}", e);
                     self.create_and_save(&path)
                 }
             }
         } else {
-            self.create_and_save(&path)
+            let dir = path.parent().unwrap();
+            match fs::create_dir_all(dir) {
+                Ok(()) => {
+                    self.create_and_save(&path)
+                }
+                Err(e) => {
+                    eprintln!("Cannot create {}.", dir.display());
+                    panic!("{}", e);
+                }
+            }
         }
     }
 }
