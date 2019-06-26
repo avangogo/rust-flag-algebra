@@ -13,6 +13,7 @@
 ///    ...
 ///}
 ///```
+
 pub trait StreamingIterator<A>
 where
     A: ?Sized,
@@ -44,7 +45,7 @@ pub struct Subsets {
 impl Subsets {
     /// Create an iterator on the subsets of `[n]`.
     pub fn new(n: usize) -> Self {
-        Subsets {
+        Self {
             n,
             data: Vec::with_capacity(n),
             untouched: true,
@@ -87,7 +88,7 @@ pub struct Functions {
 impl Functions {
     /// Create an iterator on the function from `[n]` to `[k]`.
     pub fn new(n: usize, k: usize) -> Self {
-        Functions {
+        Self {
             n,
             k,
             data: vec![0; n],
@@ -138,7 +139,7 @@ impl Choose {
     /// Subsets of [n] with k elements that contain [fixed].  
     pub fn with_fixed_part(n: usize, k: usize, fixed: usize) -> Self {
         assert!(fixed <= k && k <= n);
-        Choose {
+        Self {
             n,
             k,
             fixed,
@@ -188,7 +189,7 @@ impl Split {
     /// and `n-k+fixed` that both contain `[fixed]`.
     pub fn with_fixed_part(n: usize, k: usize, fixed: usize) -> Self {
         let second_part_size = n - k + fixed;
-        Split {
+        Self {
             choose: Choose::with_fixed_part(n, k, fixed),
             second_part: (0..second_part_size).collect(),
         }
@@ -232,10 +233,10 @@ pub struct Injection {
 
 impl Injection {
     /// Iterator on the injections from `[k]` to `[n]` that stabilize `[fixed]`.
-    pub fn with_fixed_part(n: usize, k: usize, fixed: usize) -> Injection {
+    pub fn with_fixed_part(n: usize, k: usize, fixed: usize) -> Self {
         assert!(k <= n);
         assert!(fixed <= k);
-        Injection {
+        Self {
             n,
             k,
             data: (0..n).collect(),
@@ -246,12 +247,12 @@ impl Injection {
     }
 
     /// Iterator on the injections from [k] to [n].
-    pub fn new(n: usize, k: usize) -> Injection {
+    pub fn new(n: usize, k: usize) -> Self {
         Self::with_fixed_part(n, k, 0)
     }
 
     ///Iterator on the permutations of [n].
-    pub fn permutation(n: usize) -> Injection {
+    pub fn permutation(n: usize) -> Self {
         Self::new(n, n)
     }
 

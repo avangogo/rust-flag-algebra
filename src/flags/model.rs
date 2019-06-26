@@ -40,7 +40,7 @@ where
     R: BinRelation + Serialize + DeserializeOwned,
 {
     fn induce(&self, p: &[usize]) -> Self {
-        Model {
+        Self {
             size: p.len(),
             rel: self.rel.induce(p),
         }
@@ -52,7 +52,7 @@ where
 
     fn all_flags(n: usize) -> Vec<Self> {
         if n == 0 {
-            vec![Model {
+            vec![Self {
                 size: 0,
                 rel: R::empty(),
             }]
@@ -66,7 +66,7 @@ where
         self.rel
             .extensions(size)
             .into_iter()
-            .map(|rel| Model {
+            .map(|rel| Self {
                 size: size + 1,
                 rel,
             })

@@ -81,9 +81,7 @@ where
         } else {
             let dir = path.parent().unwrap();
             match fs::create_dir_all(dir) {
-                Ok(()) => {
-                    self.create_and_save(&path)
-                }
+                Ok(()) => self.create_and_save(&path),
                 Err(e) => {
                     eprintln!("Cannot create {}.", dir.display());
                     panic!("{}", e);
@@ -106,7 +104,7 @@ pub struct Type {
 impl Type {
     /// Constructor for the type.
     pub fn new(size: usize, id: usize) -> Self {
-        Type { size, id }
+        Self { size, id }
     }
     /// Create a type of size 0.
     pub fn empty() -> Self {
@@ -139,7 +137,7 @@ impl<F: Flag> Basis<F> {
     /// Constructor for a basis.
     pub fn make(size: usize, t: Type) -> Self {
         assert!(t.size <= size);
-        Basis {
+        Self {
             size,
             t,
             phantom: PhantomData,
@@ -204,7 +202,7 @@ impl<F: Flag> Savable<Vec<F>, F> for Basis<F> {
                 F::generate_next(&self.with_size(self.size - 1).get())
             }
         } else {
-            let type_basis = Basis::new(self.t.size).get();
+            let type_basis = Self::new(self.t.size).get();
             let type_flag = &type_basis[self.t.id];
             F::generate_typed_up(type_flag, &self.without_type().get())
         }
@@ -228,7 +226,7 @@ impl<F: Flag> SplitCount<F> {
     pub fn make(left_size: usize, right_size: usize, type_: Type) -> Self {
         assert!(type_.size <= left_size);
         assert!(type_.size <= right_size);
-        SplitCount {
+        Self {
             left_size,
             right_size,
             type_,
@@ -293,7 +291,7 @@ pub struct SubflagCount<F> {
 impl<F: Flag> SubflagCount<F> {
     pub fn make(k: usize, n: usize, type_: Type) -> Self {
         assert!(type_.size <= k && k <= n);
-        SubflagCount {
+        Self {
             k,
             n,
             type_,
@@ -340,7 +338,7 @@ impl<F: Flag> Savable<CsMat<u64>, F> for SubflagCount<F> {
 // == unlabeling operators
 /// Let F be the flag indexed by id on basis basis
 /// this represents the unlabeling opearation that
-/// sends the type fully_typed(F) to the flag F
+/// sends the type `fully_typed(F)` to the flag `F`
 #[derive(Debug)]
 pub struct Unlabeling<F> {
     flag: usize,
@@ -358,7 +356,7 @@ impl<F: Flag> Unlabeling<F> {
     }
 
     pub fn new(basis: Basis<F>, flag: usize) -> Self {
-        Unlabeling { basis, flag }
+        Self { basis, flag }
     }
 
     pub fn total(t: Type) -> Self {
@@ -430,7 +428,7 @@ impl<F> Display for MulAndUnlabeling<F> {
 impl<F: Flag> MulAndUnlabeling<F> {
     pub fn new(split: SplitCount<F>, unlabeling: Unlabeling<F>) -> Self {
         debug_assert_eq!(split.type_, unlabeling.input_type());
-        MulAndUnlabeling { split, unlabeling }
+        Self { split, unlabeling }
     }
     fn unlabeling_flag(&self) -> UnlabelingFlag<F> {
         UnlabelingFlag {
@@ -469,7 +467,7 @@ impl<F: Flag> Savable<Vec<CsMat<u64>>, F> for MulAndUnlabeling<F> {
         let n = self.output_basis().get().len();
         let pre = pre_image(n, &unlab_f);
         let mut res = Vec::new();
-        for pre_i in pre.iter() {
+        for pre_i in &pre {
             let mut res_i = CsMat::zero(mul[0].shape());
             for &j in pre_i {
                 res_i = &res_i + &(&mul[j] * unlab_c[j]); // can be optimized
@@ -492,7 +490,7 @@ impl<F: Flag> Savable<Vec<CsMat<u64>>, F> for MulAndUnlabeling<F> {
 // (derive(Copy) does not to work well with PhantomData)
 impl<F> Clone for Basis<F> {
     fn clone(&self) -> Self {
-        Basis {
+        Self {
             size: self.size,
             t: self.t,
             phantom: PhantomData,
@@ -501,7 +499,7 @@ impl<F> Clone for Basis<F> {
 }
 impl<F> Clone for Unlabeling<F> {
     fn clone(&self) -> Self {
-        Unlabeling {
+        Self {
             flag: self.flag,
             basis: self.basis,
         }
@@ -643,7 +641,7 @@ where
     {
         let flags = self.get();
         let mut vec = Vec::new();
-        for g in flags.iter() {
+        for g in &flags {
             vec.push(f(g, self.t.size).into())
         }
         QFlag {
@@ -659,10 +657,10 @@ where
         // m: size of a cs basis
         for m in (n + self.t.size + 1) / 2..=(2 * n - 1) / 2 {
             let sigma = 2 * m - n;
-            let unlab_basis = Basis::<F>::new(sigma).with_type(self.t);
+            let unlab_basis = Self::new(sigma).with_type(self.t);
             for unlab_id in 0..unlab_basis.get().len() {
                 let unlab = Unlabeling::new(unlab_basis, unlab_id);
-                let input_basis = Basis::new(m).with_type(unlab.input_type());
+                let input_basis = Self::new(m).with_type(unlab.input_type());
                 let split = SplitCount::from_input(&input_basis, &input_basis);
                 res.push(MulAndUnlabeling::new(split, unlab))
             }

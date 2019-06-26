@@ -78,45 +78,6 @@ pub trait FlatMatrix: Sized {
     }
 }
 
-/*
-/// Relation R such that R(x,x) does not hold
-#[derive(Clone,Debug,PartialOrd,Ord,Eq,PartialEq,Serialize,Deserialize)]
-pub struct NonRefl<A>(Vec<A>);
-
-impl<A> FlatMatrix for NonRefl<A> {
-    type Item = A;
-
-    fn data_size(size: usize) -> usize {
-        2 * SymNonRefl::<A>::data_size(size)
-    }
-    fn flat_index(i: usize, j: usize) -> usize {
-        debug_assert_ne!(i, j);
-        if i < j {
-            Self::data_size(j) + 2*i
-        } else {
-            Self::data_size(i) + 2*j + 1
-        }
-    }
-    fn get_vec(&self) -> &Vec<A> {
-        &self.0
-    }
-    fn get_vec_mut(&mut self) -> &mut Vec<A> {
-        &mut self.0
-    }
-    fn from_vec(v: Vec<A>) -> Self {
-        NonRefl(v)
-    }
-    fn index_iter(n: usize) ->  Box<Iterator<Item = (usize, usize)>> {
-        Box::new((0..n).flat_map(
-            move |i|{ Self::line_iter(n, i).map(move |j|{ (i, j) }) }))
-    }
-    fn line_iter(n: usize, v: usize) -> Box<Iterator<Item = usize>> {
-        debug_assert!( v <= n );
-        Box::new( (0..v).chain((v+1)..n) )
-    }
-}
-*/
-
 /// Relation R such that R(x,y) iff R(y,x).
 #[derive(Clone, Debug, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Sym<A>(Vec<A>);
@@ -401,8 +362,8 @@ where
         let e1 = self.0.extensions(n);
         let e2 = self.1.extensions(n);
         let mut res = Vec::new();
-        for x1 in e1.iter() {
-            for x2 in e2.iter() {
+        for x1 in &e1 {
+            for x2 in &e2 {
                 res.push((x1.clone(), x2.clone()))
             }
         }
@@ -436,9 +397,9 @@ where
         let e2 = self.1.extensions(n);
         let e3 = self.2.extensions(n);
         let mut res = Vec::new();
-        for x1 in e1.iter() {
-            for x2 in e2.iter() {
-                for x3 in e3.iter() {
+        for x1 in &e1 {
+            for x2 in &e2 {
+                for x3 in &e3 {
                     res.push((x1.clone(), x2.clone(), x3.clone()))
                 }
             }

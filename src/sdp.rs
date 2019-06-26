@@ -59,10 +59,10 @@ where
     /// Panic if the size of the basis involved are inconsistent.
     pub fn check(&self) {
         let b = self.obj.basis;
-        for ineq in self.ineqs.iter() {
+        for ineq in &self.ineqs {
             assert_eq!(ineq.meta.basis, b);
         }
-        for cs in self.cs.iter() {
+        for cs in &self.cs {
             assert_eq!(cs.output_basis(), b);
         }
     }
@@ -73,7 +73,7 @@ where
         writeln!(file, "* Basis: {:}", self.obj.basis)?;
         writeln!(file, "* {} groups of linear constraints", self.ineqs.len())?;
         writeln!(file, "* {} Cauchy-Schwarz constraints", self.cs.len())?;
-        for i in self.ineqs.iter() {
+        for i in &self.ineqs {
             writeln!(
                 file,
                 "* {} >= {} ({})",
@@ -82,7 +82,7 @@ where
                 i.data.len()
             )?;
         }
-        for cs in self.cs.iter() {
+        for cs in &self.cs {
             writeln!(file, "* {}", cs)?;
         }
         writeln!(file, "*")
@@ -100,22 +100,22 @@ where
         // Line 2: Number of blocks (one for each constraint)
         writeln!(file, "{}", self.ineqs.len() + self.cs.len())?;
         // Line 3: Sizes of the blocks
-        for ineq in self.ineqs.iter() {
+        for ineq in &self.ineqs {
             write!(file, "-{} ", ineq.data.len())?;
         }
-        for split in cs_mat.iter() {
+        for split in &cs_mat {
             write!(file, "{} ", split[0].rows())?;
         }
         writeln!(file)?;
         // Line 4: vector ai
-        for v in self.obj.data.iter() {
+        for v in &self.obj.data {
             write!(file, "{} ", v)?;
         }
         writeln!(file)?;
         // Lines 5+: body
         // Matrix 0: Objective
         for (block_num, ineq) in self.ineqs.iter().enumerate() {
-            for (i, ref inequality) in ineq.data.iter().enumerate() {
+            for (i, inequality) in ineq.data.iter().enumerate() {
                 write_coeff(&mut file, 0, block_num, i, i, inequality.bound)?;
             }
         }
@@ -123,7 +123,7 @@ where
         // Matrices 1+:
         // Inequaltity blocks
         for (block_num, ineq) in self.ineqs.iter().enumerate() {
-            for (i, ref ineqdata) in ineq.data.iter().enumerate() {
+            for (i, ineqdata) in ineq.data.iter().enumerate() {
                 for (mat_num, &v) in ineqdata.flag.iter().enumerate() {
                     write_coeff(&mut file, mat_num + 1, block_num, i, i, v)?;
                 }
@@ -158,13 +158,17 @@ impl Certificate {
         let line: String = buf.next().unwrap().unwrap();
         let y: Vec<f64> = line[..]
             .split(' ')
-            .filter(|x| x.is_empty())
-            .map(|x| {
-                println!("{}", x);
-                x.parse().unwrap()
+            //  .filter_map(|x| x.is_empty())
+            .filter_map(|x| {
+                if x.is_empty() {
+                    println!("{}", x);
+                    Some(x.parse().unwrap())
+                } else {
+                    None
+                }
             })
             .collect();
-        Ok(Certificate { y })
+        Ok(Self { y })
     }
     pub fn to_vec<F>(&self, b: Basis<F>, threshold: f64) -> QFlag<f64, F>
     where

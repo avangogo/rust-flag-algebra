@@ -46,9 +46,54 @@ impl Expr {
             Num(format!("{}", n))
         }
     }
+    fn simplify0(&self) -> Self {
+        match self {
+            Add(a0, b0) => {
+                let a = a0.simplify0();
+                let b = b0.simplify0();
+                if a == Zero {
+                    b
+                } else if b == Zero {
+                    a
+                } else {
+                    Self::add(a, b)
+                }
+            }
+            Mul(a0, b0) => {
+                let a = a0.simplify0();
+                let b = b0.simplify0();
+                if a == One {
+                    b
+                } else if b == One {
+                    a
+                } else if a == Zero || b == Zero {
+                    Zero
+                } else {
+                    Self::mul(a, b)
+                }
+            }
+            Neg(a0) => {
+                let a = a0.simplify0();
+                if a == Zero {
+                    Zero
+                } else {
+                    Self::neg(a)
+                }
+            }
+            Unlab(a0) => {
+                let a = a0.simplify0();
+                if a == Zero {
+                    Zero
+                } else {
+                    Self::unlab(a)
+                }
+            }
+            a => a.clone(),
+        }
+    }
 }
 
-use self::Expr::*;
+use Expr::*;
 
 impl Display for Expr {
     fn fmt(&self, f: &mut Formatter) -> Result {
@@ -65,57 +110,8 @@ impl Display for Expr {
             Unlab(a) => write!(f, "[|{}|]", a),
             Zero => write!(f, "0"),
             One => write!(f, "1"),
-            Num(s) => write!(f, "{}", s),
-            Flag(s) => write!(f, "{}", s),
+            Num(s) | Flag(s) => write!(f, "{}", s),
             Var(_) => write!(f, "x"),
-        }
-    }
-}
-
-impl Expr {
-    fn simplify0(&self) -> Self {
-        match self {
-            Add(a0, b0) => {
-                let a = a0.simplify0();
-                let b = b0.simplify0();
-                if a == Zero {
-                    b
-                } else if b == Zero {
-                    a
-                } else {
-                    Expr::add(a, b)
-                }
-            }
-            Mul(a0, b0) => {
-                let a = a0.simplify0();
-                let b = b0.simplify0();
-                if a == One {
-                    b
-                } else if b == One {
-                    a
-                } else if a == Zero || b == Zero {
-                    Zero
-                } else {
-                    Expr::mul(a, b)
-                }
-            }
-            Neg(a0) => {
-                let a = a0.simplify0();
-                if a == Zero {
-                    Zero
-                } else {
-                    Expr::neg(a)
-                }
-            }
-            Unlab(a0) => {
-                let a = a0.simplify0();
-                if a == Zero {
-                    Zero
-                } else {
-                    Expr::unlab(a)
-                }
-            }
-            a => a.clone(),
         }
     }
 }

@@ -99,8 +99,9 @@ pub struct SubClass<F, A> {
 }
 
 impl<F, A> From<F> for SubClass<F, A> {
+    #[inline]
     fn from(x: F) -> Self {
-        SubClass {
+        Self {
             content: x,
             phantom: PhantomData,
         }
@@ -113,6 +114,7 @@ impl<F: Flag, A> Clone for SubClass<F, A> {
     }
 }
 impl<F: Flag, A> Serialize for SubClass<F, A> {
+    #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -121,6 +123,7 @@ impl<F: Flag, A> Serialize for SubClass<F, A> {
     }
 }
 impl<'de, F: Flag, A> Deserialize<'de> for SubClass<F, A> {
+    #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -129,27 +132,32 @@ impl<'de, F: Flag, A> Deserialize<'de> for SubClass<F, A> {
     }
 }
 impl<F: Flag, A> Display for SubClass<F, A> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.content, f)
     }
 }
 impl<F: Flag, A> Debug for SubClass<F, A> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Debug::fmt(&self.content, f)
     }
 }
 impl<F: Flag, A> PartialEq for SubClass<F, A> {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.content.eq(&other.content)
     }
 }
 impl<F: Flag, A> Eq for SubClass<F, A> {}
 impl<F: Flag, A> PartialOrd for SubClass<F, A> {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 impl<F: Flag, A> Ord for SubClass<F, A> {
+    #[inline]
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         self.content.cmp(&other.content)
     }
@@ -169,6 +177,7 @@ impl<F, A> Canonize for SubClass<F, A>
 where
     F: Flag,
 {
+    #[inline]
     fn size(&self) -> usize {
         self.content.size()
     }

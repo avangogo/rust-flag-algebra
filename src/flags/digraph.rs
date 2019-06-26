@@ -37,7 +37,7 @@ impl Neg for Arc {
     }
 }
 
-use self::Arc::*;
+use Arc::*;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Serialize, Deserialize)]
 /// Directed graphs.
@@ -79,14 +79,14 @@ impl Digraph {
             assert!(new_edge.get(u, v) == None);
             new_edge.set((u, v), Edge);
         }
-        Digraph {
+        Self {
             size: n,
             edge: new_edge,
         }
     }
     /// Directed graph with `n` vertices and no edge.
     pub fn empty(n: usize) -> Self {
-        Digraph {
+        Self {
             size: n,
             edge: AntiSym::new(None, n),
         }
@@ -95,7 +95,7 @@ impl Digraph {
     fn exist_triangle_with(&self, v: usize) -> bool {
         let out_v = self.out_nbrs(v);
         for i in self.in_nbrs(v) {
-            for &o in out_v.iter() {
+            for &o in &out_v {
                 if self.edge.get(o, i) == Edge {
                     return true;
                 }
@@ -113,7 +113,7 @@ impl Digraph {
         for v in 0..n {
             edge.set((v, n), Edge);
         }
-        Digraph { edge, size: n + 1 }
+        Self { edge, size: n + 1 }
     }
 }
 
@@ -151,7 +151,7 @@ impl Canonize for Digraph {
 impl Flag for Digraph {
     fn induce(&self, p: &[usize]) -> Self {
         let k = p.len();
-        let mut res = Digraph::empty(k);
+        let mut res = Self::empty(k);
         for u1 in 0..k {
             for u2 in 0..u1 {
                 res.edge.set((u1, u2), self.edge.get(p[u1], p[u2]));
@@ -166,7 +166,7 @@ impl Flag for Digraph {
 
     fn all_flags(n: usize) -> Vec<Self> {
         if n == 0 {
-            vec![Digraph::empty(0)]
+            vec![Self::empty(0)]
         } else {
             unimplemented!()
         }
@@ -183,7 +183,7 @@ impl Flag for Digraph {
             for v in 0..n {
                 edge.set((v, n), arcs[f[v]]);
             }
-            res.push(Digraph { edge, size: n + 1 });
+            res.push(Self { edge, size: n + 1 });
         }
         res
     }

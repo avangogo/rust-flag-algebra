@@ -28,22 +28,22 @@ impl Graph {
     }
     /// Create a graph on `n` vertices with edge set `edge`.
     /// The vertices of this graph are `0,...,n-1`.
-    pub fn new(n: usize, edge: &[(usize, usize)]) -> Graph {
+    pub fn new(n: usize, edge: &[(usize, usize)]) -> Self {
         let mut new_edge = SymNonRefl::new(false, n);
         for &(u, v) in edge {
             assert!(u < n);
             assert!(v < n);
             new_edge[(u, v)] = true;
         }
-        Graph {
+        Self {
             size: n,
             edge: new_edge,
         }
     }
 
     /// Create the graph on `n` vertices with no edge.  
-    pub fn empty(n: usize) -> Graph {
-        Graph {
+    pub fn empty(n: usize) -> Self {
+        Self {
             size: n,
             edge: SymNonRefl::new(false, n),
         }
@@ -95,15 +95,15 @@ impl Canonize for Graph {
         assert!(v < self.size);
         vec![self.nbrs(v)]
     }
-    fn apply_morphism(&self, p: &[usize]) -> Graph {
+    fn apply_morphism(&self, p: &[usize]) -> Self {
         self.induce(&combinatorics::invert(p))
     }
 }
 
 impl Flag for Graph {
-    fn induce(&self, p: &[usize]) -> Graph {
+    fn induce(&self, p: &[usize]) -> Self {
         let k = p.len();
-        let mut res = Graph::empty(k);
+        let mut res = Self::empty(k);
         for u1 in 0..k {
             for u2 in 0..u1 {
                 res.edge[(u1, u2)] = self.edge[(p[u1], p[u2])];
@@ -115,15 +115,15 @@ impl Flag for Graph {
         String::from("Graph")
     }
 
-    fn all_flags(n: usize) -> Vec<Graph> {
+    fn all_flags(n: usize) -> Vec<Self> {
         if n == 0 {
-            vec![Graph::empty(0)]
+            vec![Self::empty(0)]
         } else {
             unimplemented!()
         }
     }
 
-    fn superflags(&self) -> Vec<Graph> {
+    fn superflags(&self) -> Vec<Self> {
         let n = self.size;
         let mut res = Vec::new();
         let mut iter = iterators::Subsets::new(n);
@@ -133,7 +133,7 @@ impl Flag for Graph {
             for &v in subset {
                 edge[(v, n)] = true;
             }
-            res.push(Graph { edge, size: n + 1 });
+            res.push(Self { edge, size: n + 1 });
         }
         res
     }
@@ -142,7 +142,7 @@ impl Flag for Graph {
 // particular graphs
 impl Graph {
     pub fn petersen() -> Self {
-        Graph::new(
+        Self::new(
             10,
             &[
                 (0, 1),
@@ -170,12 +170,12 @@ impl Graph {
                 edges.push((i, j))
             }
         }
-        Graph::new(n, &edges)
+        Self::new(n, &edges)
     }
     pub fn cycle(n: usize) -> Self {
         let mut edges: Vec<_> = (0..n - 1).map(|i| (i, i + 1)).collect();
         edges.push((n - 1, 0));
-        Graph::new(n, &edges)
+        Self::new(n, &edges)
     }
 }
 

@@ -111,7 +111,7 @@ where
     N: Clone + Num + NumCast + ScalarOperand,
     F: Flag,
 {
-    type Output = QFlag<N, F>;
+    type Output = Self;
 
     fn sub(self, other: Self) -> Self::Output {
         &self - &other
@@ -122,10 +122,10 @@ impl<N, F> Neg for QFlag<N, F>
 where
     N: Clone + Neg<Output = N>,
 {
-    type Output = QFlag<N, F>;
+    type Output = Self;
 
     fn neg(self) -> Self::Output {
-        QFlag {
+        Self {
             basis: self.basis,
             data: -self.data,
             scale: self.scale,
@@ -157,11 +157,11 @@ where
     F: Flag,
     S: ToPrimitive,
 {
-    type Output = QFlag<N, F>;
+    type Output = Self;
 
     fn mul(self, rhs: S) -> Self::Output {
         let rhs_n = N::from(rhs).unwrap();
-        QFlag {
+        Self {
             expr: Expr::mul(self.expr.clone(), Expr::num(&rhs_n)),
             basis: self.basis,
             data: self.data * rhs_n,
@@ -216,7 +216,7 @@ where
     F: Flag,
 {
     fn raw_expand(&self, operator: &CsMat<u64>, outbasis: Basis<F>, denom: u64) -> Self {
-        QFlag {
+        Self {
             basis: outbasis,
             data: vector_matrix_mul(&operator.view(), &self.data),
             scale: self.scale * denom,
@@ -226,7 +226,7 @@ where
 
     fn raw_multiply(&self, table: &[CsMat<u64>], other: &Self, denom: u64) -> Self {
         assert_eq!(self.basis.t, other.basis.t);
-        QFlag {
+        Self {
             basis: self.basis * other.basis,
             data: multiply(&self.data, table, &other.data),
             scale: self.scale * denom * other.scale,
@@ -266,7 +266,7 @@ where
         outbasis_size: usize,
         denom: u64,
     ) -> Self {
-        QFlag {
+        Self {
             basis: outbasis,
             data: raw_untype(&self.data, untype_flag, untype_count, outbasis_size),
             scale: self.scale * denom,
@@ -322,7 +322,7 @@ where
 {
     type Output = Self;
 
-    fn mul(self, other: Self) -> QFlag<N, F> {
+    fn mul(self, other: Self) -> Self {
         &self * &other
     }
 }
@@ -414,7 +414,7 @@ pub struct IneqMeta<F> {
 
 impl<F: Flag> IneqMeta<F> {
     fn opposite(self) -> Self {
-        IneqMeta {
+        Self {
             basis: self.basis,
             flag_expr: self.flag_expr.neg(),
             bound_expr: self.bound_expr.neg(),
@@ -425,7 +425,7 @@ impl<F: Flag> IneqMeta<F> {
     }
 
     fn multiply(self, rhs_basis: &Basis<F>, rhs_expr: Expr) -> Self {
-        IneqMeta {
+        Self {
             basis: self.basis * *rhs_basis,
             flag_expr: Expr::mul(self.one_sided_expr(), rhs_expr),
             bound_expr: Expr::Zero,
@@ -433,7 +433,7 @@ impl<F: Flag> IneqMeta<F> {
     }
 
     fn untype(self) -> Self {
-        IneqMeta {
+        Self {
             basis: self.basis.with_type(Type::empty()),
             flag_expr: Expr::unlab(self.flag_expr),
             bound_expr: self.bound_expr,
@@ -460,7 +460,7 @@ where
     where
         N: Neg<Output = N>,
     {
-        IneqData {
+        Self {
             flag: -self.flag,
             bound: -self.bound,
         }
@@ -473,7 +473,7 @@ where
         if self.bound != N::zero() {
             flag.sub_assign(self.bound);
         }
-        IneqData {
+        Self {
             flag,
             bound: N::zero(),
         }
@@ -488,7 +488,7 @@ where
     where
         N: Copy + ScalarOperand + NumCast + AddAssign + Default,
     {
-        IneqData {
+        Self {
             flag: raw_untype(&self.flag, untype_flag, untype_count, outbasis_size),
             bound: self.bound * N::from(denom).unwrap(),
         }
@@ -499,7 +499,7 @@ where
         N: Copy + Default + SubAssign + AddAssign + ScalarOperand + NumCast,
     {
         let flag = multiply(&self.clone().one_sided().flag, table, g); // tbo
-        IneqData {
+        Self {
             flag,
             bound: N::zero(),
         }
@@ -518,7 +518,7 @@ where
         if let Some(other_size) = pre_result.first().map(|v| v.len()) {
             for i in 0..other_size {
                 let vec: Vec<_> = pre_result.iter().map(|x| x[i]).collect();
-                let ineq_data = IneqData {
+                let ineq_data = Self {
                     flag: ArrayBase::from_vec(vec),
                     bound: N::zero(),
                 };
@@ -546,7 +546,7 @@ where
 {
     /// If self is "`f ≥ x`", returns "`f ≤ x`".
     pub fn opposite(self) -> Self {
-        Ineq {
+        Self {
             meta: self.meta.opposite(),
             data: self.data.into_iter().map(|x| x.opposite()).collect(),
         }
@@ -577,11 +577,11 @@ where
         let basis_size = basis.get().len();
         //
         let mut data = Vec::new();
-        for i in self.data.iter() {
+        for i in &self.data {
             let f = i.untype(&unlab_f, &unlab_c, denom, basis_size);
             data.push(f)
         }
-        Ineq {
+        Self {
             meta: self.meta.untype(),
             data,
         }
@@ -599,10 +599,10 @@ where
         let table = split.get();
         //
         let mut data = Vec::new();
-        for i in self.data.iter() {
+        for i in &self.data {
             data.push(i.multiply(&table, &g.data));
         }
-        Ineq {
+        Self {
             data,
             meta: self.meta.clone().multiply(&g.basis, g.expr.clone()),
         }
@@ -619,7 +619,7 @@ where
             ineq.multiply_by_all(&table, &mut data)
         }
         //
-        Ineq {
+        Self {
             data,
             meta: self.meta.multiply(&b, Expr::Var(0)),
         }
@@ -640,7 +640,7 @@ where
         for ineq in self.data {
             ineq.multiply_by_all(&table, &mut data)
         }
-        Ineq {
+        Self {
             data,
             meta: self.meta.multiply(&other, Expr::Var(0)).untype(),
         }
