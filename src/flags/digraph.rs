@@ -192,7 +192,7 @@ pub enum TriangleFree {}
 
 impl SubFlag<Digraph> for TriangleFree {
     const SUBCLASS_NAME: &'static str = "Triangle-free digraph";
-    
+
     fn subclass_superflags(flag: &SubClass<Digraph, Self>) -> Vec<SubClass<Digraph, Self>> {
         let n = flag.content.size;
         let mut res = Vec::new();

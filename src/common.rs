@@ -15,6 +15,7 @@ pub trait FlatMatrix: Sized {
     type Item;
     /// Iterator on one line of the matrix.
     type LineIter: Iterator<Item = usize>;
+    type IndexIter: Iterator<Item = (usize, usize)>;
     // needed
     /// Length of the underlying vector depending on the number of
     /// line of the matrix.
@@ -28,7 +29,7 @@ pub trait FlatMatrix: Sized {
     /// Map a pair of indices to the corresponding index in the matrix.
     fn flat_index(i: usize, j: usize) -> usize;
     /// Iterator on every non-symetric entries of the matrix.
-    fn index_iter(n: usize) -> Box<Iterator<Item = (usize, usize)>>;
+    fn index_iter(n: usize) -> Self::IndexIter;
     /// Iterator on every non-symetric index an line `v`.
     fn line_iter(n: usize, v: usize) -> Self::LineIter;
     // recommended
@@ -87,6 +88,7 @@ use std;
 impl<A> FlatMatrix for Sym<A> {
     type Item = A;
     type LineIter = Range<usize>;
+    type IndexIter = Box<dyn Iterator<Item = (usize, usize)>>;
     #[inline]
     fn data_size(size: usize) -> usize {
         (size * (size + 1)) / 2
@@ -112,7 +114,7 @@ impl<A> FlatMatrix for Sym<A> {
         Sym(v)
     }
     #[inline]
-    fn index_iter(n: usize) -> Box<Iterator<Item = (usize, usize)>> {
+    fn index_iter(n: usize) -> Self::IndexIter {
         Box::new((0..n).flat_map(move |j| (0..=j).map(move |i| (i, j))))
     }
     #[inline]
@@ -143,6 +145,7 @@ pub struct SymNonRefl<A>(Vec<A>);
 impl<A> FlatMatrix for SymNonRefl<A> {
     type Item = A;
     type LineIter = Chain<Range<usize>, Range<usize>>;
+    type IndexIter = Box<dyn Iterator<Item = (usize, usize)>>;
 
     fn data_size(size: usize) -> usize {
         if size == 0 {
@@ -168,7 +171,7 @@ impl<A> FlatMatrix for SymNonRefl<A> {
     fn from_vec(v: Vec<A>) -> Self {
         SymNonRefl(v)
     }
-    fn index_iter(n: usize) -> Box<Iterator<Item = (usize, usize)>> {
+    fn index_iter(n: usize) -> Self::IndexIter {
         Box::new((0..n).flat_map(move |j| (0..j).map(move |i| (i, j))))
     }
     fn line_iter(n: usize, v: usize) -> Self::LineIter {
@@ -211,6 +214,7 @@ where
 {
     type Item = A;
     type LineIter = Chain<Range<usize>, Range<usize>>;
+    type IndexIter = Box<dyn Iterator<Item = (usize, usize)>>;
 
     fn data_size(size: usize) -> usize {
         SymNonRefl::<A>::data_size(size)
@@ -231,7 +235,7 @@ where
     fn from_vec(v: Vec<A>) -> Self {
         AntiSym(v)
     }
-    fn index_iter(n: usize) -> Box<Iterator<Item = (usize, usize)>> {
+    fn index_iter(n: usize) -> Self::IndexIter {
         Box::new((0..n).flat_map(move |i| (0..i).map(move |j| (i, j))))
     }
     fn line_iter(n: usize, v: usize) -> Self::LineIter {

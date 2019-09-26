@@ -111,7 +111,7 @@ impl Flag for Graph {
         }
         res
     }
-    
+
     const NAME: &'static str = "Graph";
 
     fn all_flags(n: usize) -> Vec<Self> {
