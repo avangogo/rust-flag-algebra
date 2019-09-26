@@ -111,9 +111,8 @@ impl Flag for Graph {
         }
         res
     }
-    fn name() -> String {
-        String::from("Graph")
-    }
+    
+    const NAME: &'static str = "Graph";
 
     fn all_flags(n: usize) -> Vec<Self> {
         if n == 0 {

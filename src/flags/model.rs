@@ -46,9 +46,7 @@ where
         }
     }
 
-    fn name() -> String {
-        String::from("Model")
-    }
+    const NAME: &'static str = "Model";
 
     fn all_flags(n: usize) -> Vec<Self> {
         if n == 0 {
@@ -81,7 +79,6 @@ pub type G = Model<SymNonRefl<bool>>;
 mod tests {
 
     use super::*;
-    //use crate::graph::Graph;
 
     type G = Model<SymNonRefl<bool>>;
 

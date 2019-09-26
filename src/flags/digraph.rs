@@ -4,7 +4,6 @@ use crate::common::*;
 use crate::flag::{Flag, SubClass, SubFlag};
 use crate::iterators::{Functions, StreamingIterator};
 use canonical_form::Canonize;
-use std::convert::From;
 use std::fmt;
 use std::ops::Neg;
 
@@ -160,9 +159,7 @@ impl Flag for Digraph {
         res
     }
 
-    fn name() -> String {
-        String::from("Digraph")
-    }
+    const NAME: &'static str = "Digraph";
 
     fn all_flags(n: usize) -> Vec<Self> {
         if n == 0 {
@@ -194,9 +191,8 @@ impl Flag for Digraph {
 pub enum TriangleFree {}
 
 impl SubFlag<Digraph> for TriangleFree {
-    fn subclass_name() -> String {
-        String::from("Triangle-free digraph")
-    }
+    const SUBCLASS_NAME: &'static str = "Triangle-free digraph";
+    
     fn subclass_superflags(flag: &SubClass<Digraph, Self>) -> Vec<SubClass<Digraph, Self>> {
         let n = flag.content.size;
         let mut res = Vec::new();

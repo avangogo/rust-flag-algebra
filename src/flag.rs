@@ -20,20 +20,18 @@ where
     fn induce(&self, set: &[usize]) -> Self;
     /// Returns the set of all flags of size `n`.
     ///
-    /// This list can have redundancy and a priori not reduced modulo isomorphism.
+    /// This list can have redundancy and is a priori not reduced modulo isomorphism.
     /// It is used for initialisation and does not need to be efficient.
     fn all_flags(n: usize) -> Vec<Self>;
     /// Return the list of flags of size `self.size() + 1` that contain `self`
     /// as an induced subflag.
     ///
-    /// This list can have redundancy and a priori not reduced modulo isomorphism.
+    /// This list can have redundancy and is a priori not reduced modulo isomorphism.
     fn superflags(&self) -> Vec<Self>;
     // recommended methods
-    /// A name for this type of flags. For instance "Graphe".
+    /// A name for this type of flags. For instance "Graph".
     /// This name is used for naming the associated data subdirectory.
-    fn name() -> String {
-        String::from("No name")
-    }
+    const NAME: &'static str = "No name";
 
     // provided methods
     /// Return the list of flags of size `self.size() + 1` that contain `self`
@@ -170,7 +168,8 @@ where
     Self: Sized,
 {
     fn subclass_superflags(flag: &SubClass<F, Self>) -> Vec<SubClass<F, Self>>;
-    fn subclass_name() -> String;
+
+    const SUBCLASS_NAME: &'static str;
 }
 
 impl<F, A> Canonize for SubClass<F, A>
@@ -194,9 +193,9 @@ where
     A: SubFlag<F>,
     F: Flag,
 {
-    fn name() -> String {
-        A::subclass_name()
-    }
+   
+    const NAME: &'static str =  A::SUBCLASS_NAME;
+    
     fn superflags(&self) -> Vec<Self> {
         A::subclass_superflags(self)
     }
