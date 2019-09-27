@@ -28,10 +28,9 @@ where
     ///
     /// This list can have redundancy and is a priori not reduced modulo isomorphism.
     fn superflags(&self) -> Vec<Self>;
-    // recommended methods
     /// A name for this type of flags. For instance "Graph".
     /// This name is used for naming the associated data subdirectory.
-    const NAME: &'static str = "No name";
+    const NAME: &'static str;
 
     // provided methods
     /// Return the list of flags of size `self.size() + 1` that contain `self`
@@ -193,9 +192,8 @@ where
     A: SubFlag<F>,
     F: Flag,
 {
-   
-    const NAME: &'static str =  A::SUBCLASS_NAME;
-    
+    const NAME: &'static str = A::SUBCLASS_NAME;
+
     fn superflags(&self) -> Vec<Self> {
         A::subclass_superflags(self)
     }

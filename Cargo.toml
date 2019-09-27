@@ -13,7 +13,8 @@ keywords = ["flag", "algebra", "graph", "combinatorics"]
 
 [dependencies]
 num = "0.2.0"
-sprs = "0.6.4"
+# sprs = "0.6.5"
+sprs = { git = "https://github.com/vbarrielle/sprs", branch = "master"}
 ndarray = "0.12.1"
 find_folder = "0.3.0"
 rand = "0.6.5"

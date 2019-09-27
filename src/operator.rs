@@ -39,7 +39,7 @@ where
     /// Path to the corresponding file.
     fn file_path(&self) -> PathBuf {
         let mut filename = PathBuf::from("./data");
-        filename.push(Path::new(&F::name()));
+        filename.push(Path::new(F::NAME));
         filename.push(self.filename());
         let _ = filename.set_extension("dat");
         filename
@@ -54,7 +54,7 @@ where
         value
     }
     /// Load the object if the file exists and is valid.
-    fn load(&self, path: &Path) -> Result<A, Box<Error>> {
+    fn load(&self, path: &Path) -> Result<A, Box<dyn Error>> {
         let file = File::open(&path)?;
         let mut buf = BufReader::new(file);
         let data = bincode::deserialize_from(&mut buf)?;
@@ -378,7 +378,8 @@ impl<F: Flag> Unlabeling<F> {
     pub fn output_type(&self) -> Type {
         self.basis.t
     }
-
+    /// Return the eta function of Razborov corresponding to
+    /// the untyping operator.
     pub fn eta(&self) -> Vec<usize> {
         let flag = &self.basis.get()[self.flag];
         let mut morphism = canonical_form_morphism(flag);
@@ -749,10 +750,13 @@ mod tests {
         let unlabeling = Unlabeling::<Graph>::total(t);
         let _mau = MulAndUnlabeling::new(SplitCount::make(3, 2, t), unlabeling).get();
     }
-    // #[test]
-    // fn unlabeling_eta() {
-    //     let b = Basis::<Graph>::new(3).with_type(Type::new(2,1));
-    //     let unlabeling = Unlabeling::new(b, 1);
-    //     let u = unlabeling.eta();
-    // }
+//     #[test]
+//     fn unlabeling_eta() {
+//         let b = Basis::<Graph>::new(5).with_type(Type::new(3, 1));
+//         let unlabeling = Unlabeling::new(b, 1);
+//         let eta = unlabeling.eta();
+//         let g = &unlabeling.basis.get()[unlabeling.flag];
+//         let t = unlabeling.basis.t;
+//         assert_eq!(g.induce(&eta), Basis::new(t.size).get()[t.id])
+//     }
 }
