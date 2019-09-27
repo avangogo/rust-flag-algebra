@@ -16,6 +16,11 @@ pub struct Graph {
 }
 
 impl Graph {
+    /// Return the number of vertices in the graph
+    pub fn size(&self) -> usize {
+        self.size
+    }
+    
     /// Return the vector of vertices adjacent to `v`.
     pub fn nbrs(&self, v: usize) -> Vec<usize> {
         let mut res = Vec::new();

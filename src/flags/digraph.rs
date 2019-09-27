@@ -48,6 +48,11 @@ pub struct Digraph {
 }
 
 impl Digraph {
+    /// Number of vertices
+    pub fn size(&self) -> usize {
+        self.size
+    }
+    
     /// Out-neigborhood of `v` in `self`.
     pub fn out_nbrs(&self, v: usize) -> Vec<usize> {
         let mut res = Vec::new();
@@ -192,7 +197,7 @@ pub enum TriangleFree {}
 
 impl SubFlag<Digraph> for TriangleFree {
     const SUBCLASS_NAME: &'static str = "Triangle-free digraph";
-
+    
     fn subclass_superflags(flag: &SubClass<Digraph, Self>) -> Vec<SubClass<Digraph, Self>> {
         let n = flag.content.size;
         let mut res = Vec::new();
@@ -210,5 +215,11 @@ impl SubFlag<Digraph> for TriangleFree {
             }
         }
         res
+    }
+}
+
+impl<A> SubClass<Digraph, A> {
+    pub fn size(&self) -> usize {
+        self.content.size()
     }
 }

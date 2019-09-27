@@ -3,7 +3,6 @@ extern crate flag_algebra;
 use flag_algebra::*;
 use flags::Graph;
 use sdp::Problem;
-use canonical_form::Canonize;
 
 fn is_hamiltonian(g: &Graph) -> bool {
     let mut path = Vec::new();
