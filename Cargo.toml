@@ -1,6 +1,6 @@
 [package]
 name = "flag-algebra"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Rémi de Verclos <r.deverclos@math.ru.nl>"]
 description = "An implementation of Razborov's flag algebras"
 publish = true
@@ -13,15 +13,21 @@ keywords = ["flag", "algebra", "graph", "combinatorics"]
 
 [dependencies]
 num = "0.2.0"
-# sprs = "0.6.5"
-sprs = { git = "https://github.com/vbarrielle/sprs", branch = "master"}
-ndarray = "0.12.1"
+sprs = { version = "0.7.1", features = ["serde", "serde_derive"] }
+ndarray = "0.13.0"
 find_folder = "0.3.0"
-rand = "0.6.5"
-serde = "1.0.93"
-serde_derive = "1.0.93"
-bincode = "1.1.4"
-canonical-form = "0.6.0"
+rand = "0.7.2"
+serde = "1.0.102"
+serde_derive = "1.0.102"
+bincode = "1.2.0"
+canonical-form = "0.9.2"
+typenum = "1.11.2"
+bitvec = "0.15.2"
 
-[profile.release]
-debug = true
+[dev-dependencies]
+criterion = "0.3.0"
+
+#[[bench]]
+#name = "my_benchmark"
+#harness = false
+#debug = true

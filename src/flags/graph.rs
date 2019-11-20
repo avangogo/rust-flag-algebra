@@ -2,7 +2,7 @@
 
 use crate::combinatorics;
 use crate::common::*;
-use crate::flag::Flag;
+use crate::flag::{Flag, SubFlag};
 use crate::iterators;
 use crate::iterators::StreamingIterator;
 use canonical_form::Canonize;
@@ -15,12 +15,42 @@ pub struct Graph {
     edge: SymNonRefl<bool>,
 }
 
+#[derive(Debug, Clone)]
+pub struct EdgeIterator<'a> {
+    g: &'a Graph,
+    u: usize,
+    v: usize,
+}
+
+impl<'a> Iterator for EdgeIterator<'a> {
+    type Item = (usize, usize);
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.u + 1 == self.v {
+            self.u = 0;
+            self.v += 1;
+        } else {
+            self.u += 1;
+        }
+        if self.u >= self.g.size {
+            None
+        } else {
+            if self.g.edge(self.u, self.v) {
+                Some((self.u, self.v))
+            } else {
+                self.next()
+            }
+        }
+    }
+}
+    
+
 impl Graph {
     /// Return the number of vertices in the graph
     pub fn size(&self) -> usize {
         self.size
     }
-    
+
     /// Return the vector of vertices adjacent to `v`.
     pub fn nbrs(&self, v: usize) -> Vec<usize> {
         let mut res = Vec::new();
@@ -58,6 +88,14 @@ impl Graph {
     #[inline]
     pub fn edge(&self, u: usize, v: usize) -> bool {
         u != v && self.edge[(u, v)]
+    }
+
+    pub fn edges<'a>(&'a self) -> EdgeIterator<'a> {
+        EdgeIterator {
+            g: self,
+            u: 0,
+            v: 0,
+        }
     }
 
     /// Returns `true` if the graph is connected.
@@ -101,7 +139,7 @@ impl Canonize for Graph {
         vec![self.nbrs(v)]
     }
     fn apply_morphism(&self, p: &[usize]) -> Self {
-        self.induce(&combinatorics::invert(p))
+        self.induce(&combinatorics::invert(&p))
     }
 }
 
@@ -180,6 +218,20 @@ impl Graph {
         let mut edges: Vec<_> = (0..n - 1).map(|i| (i, i + 1)).collect();
         edges.push((n - 1, 0));
         Self::new(n, &edges)
+    }
+}
+
+/// Connected graphs
+#[derive(Debug, Clone, Copy)]
+pub enum Connected {}
+
+impl SubFlag<Graph> for Connected {
+    const SUBCLASS_NAME: &'static str = "Connected graph";
+
+    const HEREDITARY: bool = false;
+
+    fn is_in_subclass(flag: &Graph) -> bool {
+        flag.connected()
     }
 }
 

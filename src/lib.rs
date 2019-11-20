@@ -48,7 +48,7 @@
     unused_import_braces,
     unused_qualifications,
     unused_labels,
-    unused_results,
+    unused_results
 )]
 
 mod algebra;

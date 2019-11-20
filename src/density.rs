@@ -2,18 +2,17 @@
 
 use crate::flag::Flag;
 use crate::iterators::*;
-use canonical_form::*;
 use sprs::{CsMat, TriMatI, CSC, CSR};
 
 fn induce_and_reduce<F: Flag>(type_size: usize, f: &F, subset: &[usize]) -> F {
-    canonical_form_typed(&f.induce(subset), type_size)
+    f.induce(subset).canonical_typed(type_size)
 }
 
 /// Returns the number of induced subflags of `g` isomorphic to `f`,
 /// considered with type of size `type_size`.
 pub fn count_subflags<F: Flag>(type_size: usize, f: &F, g: &F) -> u64 {
     // f must be in normal form
-    assert_eq!(*f, canonical_form_typed(f, type_size));
+    assert_eq!(*f, f.canonical_typed(type_size));
     let k = f.size();
     let n = g.size();
     assert!(type_size <= k && k <= n);
@@ -31,8 +30,8 @@ pub fn count_subflags<F: Flag>(type_size: usize, f: &F, g: &F) -> u64 {
 /// with intersection `[type_size]`
 /// inducing `f1` and `f2`.
 pub fn count_split<F: Flag>(type_size: usize, f1: &F, f2: &F, g: &F) -> u64 {
-    assert_eq!(*f1, canonical_form_typed(f1, type_size));
-    assert_eq!(*f2, canonical_form_typed(f2, type_size));
+    assert_eq!(*f1, f1.canonical_typed(type_size));
+    assert_eq!(*f2, f2.canonical_typed(type_size));
     let k1 = f1.size();
     let k2 = f2.size();
     let n = g.size();
@@ -69,10 +68,14 @@ pub fn count_subflag_tabulate<F: Flag>(type_size: usize, f_vec: &[F], g_vec: &[F
         let mut iter = Choose::with_fixed_part(n, k, type_size);
         while let Some(subset) = iter.next() {
             let f0 = induce_and_reduce(type_size, g, subset);
-            let i = f_vec
-                .binary_search(&f0)
-                .unwrap_or_else(|_| panic!("Flag not found: {:?}", &f0));
-            column[i] += 1;
+            match f_vec.binary_search(&f0) {
+                Ok(i) => column[i] += 1,
+                Err(_) => {
+                    if F::HEREDITARY {
+                        panic!("Flag not found: {:?}", &f0)
+                    }
+                }
+            };
         }
         res = res.append_outer(&column)
     }
@@ -114,11 +117,11 @@ pub fn count_split_tabulate<F: Flag>(
         while let Some((subset1, subset2)) = iter.next() {
             let f1 = induce_and_reduce(type_size, g, subset1);
             let f2 = induce_and_reduce(type_size, g, subset2);
-            if let Ok(i1) = f1_vec.binary_search(&f1) {
-                if let Ok(i2) = f2_vec.binary_search(&f2) {
-                    tri_mat.add_triplet(i1, i2, 1);
-                }
-            }
+            if let (Ok(i1), Ok(i2)) = (f1_vec.binary_search(&f1), f2_vec.binary_search(&f2)) {
+                tri_mat.add_triplet(i1, i2, 1);
+            } else if F::HEREDITARY {
+                panic!("Flag not found")
+            };
         }
         let mat = if storage == CSR {
             tri_mat.to_csr()
@@ -142,11 +145,11 @@ pub fn unlabeling_tabulate<F: Flag>(
     let type_size = eta.len();
     let mut res = Vec::new();
     for flag in input_vec {
-        let unlabeled = canonical_form_typed(&flag.select_type(eta), type_size);
+        let unlabeled = flag.select_type(eta).canonical_typed(type_size);
         // FIXME
         if type_size == 0 {
-            assert_eq!(&unlabeled, &canonical_form_typed(&unlabeled, 0));
-            assert_eq!(&unlabeled, &canonical_form(&unlabeled));
+            debug_assert_eq!(unlabeled, unlabeled.canonical_typed(0));
+            debug_assert_eq!(unlabeled, unlabeled.canonical());
         }
         res.push(
             output_vec.binary_search(&unlabeled).unwrap_or_else(|_| {
@@ -161,7 +164,7 @@ pub fn unlabeling_tabulate<F: Flag>(
 /// `input_vec[i]` while keeping the same (labeled) flag.
 ///
 /// The relabeling is performed while fixing the image of `eta` as the new type.
-pub fn unlabeling_count_tabulate<F: Flag>(
+pub fn old_unlabeling_count_tabulate<F: Flag>(
     eta: &[usize],
     type_size: usize,
     input_vec: &[F],
@@ -169,14 +172,32 @@ pub fn unlabeling_count_tabulate<F: Flag>(
     assert!(!input_vec.is_empty());
     let mut res: Vec<u64> = vec![0; input_vec.len()];
     for (i, flag) in input_vec.iter().enumerate() {
-        let flag2 = flag.select_type(eta);
+        let flag2 = flag.select_type(eta).canonical_typed(type_size);
         let mut iter = Injection::with_fixed_part(flag2.size(), type_size, eta.len());
         while let Some(phi) = iter.next() {
-            let f = canonical_form_typed(&flag2.select_type(phi), type_size);
-            if &f == flag {
+            let f = flag2.select_type(phi).canonical_typed(type_size);
+            if f == flag2 {
                 res[i] += 1;
             }
         }
+    }
+    res
+}
+
+pub fn unlabeling_count_tabulate<F: Flag>(
+    eta: &[usize],
+    type_size: usize,
+    input_vec: &[F],
+) -> Vec<u64> {
+    // Can be further optimized
+    assert!(!input_vec.is_empty());
+    let mut res: Vec<u64> = vec![0; input_vec.len()];
+    for (i, flag) in input_vec.iter().enumerate() {
+        let flag2 = flag.select_type(eta).canonical_typed(eta.len());
+        let aut_typed = flag.stabilizer(type_size).count() as u64;
+        let aut = flag2.stabilizer(eta.len()).count() as u64;
+        assert_eq!(aut % aut_typed, 0);
+        res[i] = aut / aut_typed;
     }
     res
 }
@@ -186,9 +207,10 @@ pub fn unlabeling_count_tabulate<F: Flag>(
 mod tests {
     use super::*;
     use crate::flags::*;
-
+    use canonical_form::Canonize;
+    
     fn count_subflags_ext<F: Flag>(sigma: usize, h: &F, g: &F) -> u64 {
-        count_subflags(sigma, &canonical_form_typed(h, sigma), g)
+        count_subflags(sigma, &h.canonical_typed(sigma), g)
     }
 
     #[test]
@@ -201,7 +223,7 @@ mod tests {
         let c5 = Graph::cycle(5);
         assert_eq!(
             12,
-            count_subflags(0, &canonical_form(&c5), &canonical_form(&Graph::petersen()))
+            count_subflags(0, &c5.canonical(), &Graph::petersen().canonical())
         );
     }
 
@@ -232,12 +254,9 @@ mod tests {
 
     #[test]
     fn unit_count_split() {
-        let cherry = canonical_form(&Graph::new(3, &[(0, 1), (1, 2)]));
-        let edge = canonical_form(&Graph::new(2, &[(0, 1)]));
-        let g = canonical_form(&Graph::new(
-            5,
-            &[(0, 1), (1, 2), (2, 3), (3, 4), (4, 0), (0, 2)],
-        ));
+        let cherry = Graph::new(3, &[(0, 1), (1, 2)]).canonical();
+        let edge = Graph::new(2, &[(0, 1)]).canonical();
+        let g = Graph::new(5, &[(0, 1), (1, 2), (2, 3), (3, 4), (4, 0), (0, 2)]).canonical();
         assert_eq!(4, count_split(0, &cherry, &edge, &g));
     }
 

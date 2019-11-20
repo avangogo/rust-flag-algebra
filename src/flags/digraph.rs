@@ -52,7 +52,7 @@ impl Digraph {
     pub fn size(&self) -> usize {
         self.size
     }
-    
+
     /// Out-neigborhood of `v` in `self`.
     pub fn out_nbrs(&self, v: usize) -> Vec<usize> {
         let mut res = Vec::new();
@@ -96,16 +96,20 @@ impl Digraph {
         }
     }
 
-    fn exist_triangle_with(&self, v: usize) -> bool {
-        let out_v = self.out_nbrs(v);
-        for i in self.in_nbrs(v) {
-            for &o in &out_v {
-                if self.edge.get(o, i) == Edge {
-                    return true;
+    fn triangle_free(&self) -> bool {
+        for u in 0..self.size {
+            // Assume u is the largest vertex
+            for v in 0..u {
+                if self.edge.get(v, u) == Edge {
+                    for w in 0..u {
+                        if self.edge.get(u, w) == Edge && self.edge.get(w, v) == Edge {
+                            return false;
+                        }
+                    }
                 }
             }
         }
-        false
+        true
     }
 
     /// Directed graph obtained from `self` by adding a vertex and every edge
@@ -175,6 +179,7 @@ impl Flag for Digraph {
     }
 
     fn superflags(&self) -> Vec<Self> {
+        //FIXME
         let n = self.size;
         let mut res = Vec::new();
         let mut iter = Functions::new(n, 3);
@@ -197,24 +202,9 @@ pub enum TriangleFree {}
 
 impl SubFlag<Digraph> for TriangleFree {
     const SUBCLASS_NAME: &'static str = "Triangle-free digraph";
-    
-    fn subclass_superflags(flag: &SubClass<Digraph, Self>) -> Vec<SubClass<Digraph, Self>> {
-        let n = flag.content.size;
-        let mut res = Vec::new();
-        let mut iter = Functions::new(n, 3);
-        let arcs = vec![Edge, BackEdge, None];
-        while let Some(f) = iter.next() {
-            let mut edge = flag.content.edge.clone();
-            edge.resize(n + 1, None);
-            for v in 0..n {
-                edge.set((v, n), arcs[f[v]]);
-            }
-            let digraph = Digraph { edge, size: n + 1 };
-            if !digraph.exist_triangle_with(n) {
-                res.push(digraph.into());
-            }
-        }
-        res
+
+    fn is_in_subclass(flag: &Digraph) -> bool {
+        flag.triangle_free()
     }
 }
 

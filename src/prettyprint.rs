@@ -91,6 +91,24 @@ impl Expr {
             a => a.clone(),
         }
     }
+    fn is_sum(&self) -> bool {
+        match self {
+            Add(_, _) => true,
+            _ => false,
+        }
+    }
+}
+
+struct Paren<'a>(&'a Expr);
+
+impl<'a> Display for Paren<'a> {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        if self.0.is_sum() {
+            write!(f, "({})", self.0)
+        } else {
+            write!(f, "{}", self.0)
+        }
+    }
 }
 
 use Expr::*;
@@ -100,13 +118,13 @@ impl Display for Expr {
         match self.simplify0() {
             Add(a, b) => {
                 if let Neg(b1) = *b {
-                    write!(f, "{} - {}", a, b1)
+                    write!(f, "{} - {}", a, Paren(&b1))
                 } else {
                     write!(f, "{} + {}", a, b)
                 }
-            }
-            Mul(a, b) => write!(f, "{}*{}", a, b),
-            Neg(a) => write!(f, "-{}", a),
+            },
+            Mul(a, b) => write!(f, "{}*{}", Paren(&a), Paren(&b)),
+            Neg(a) => write!(f, "-{}", Paren(&a)),
             Unlab(a) => write!(f, "[|{}|]", a),
             Zero => write!(f, "0"),
             One => write!(f, "1"),

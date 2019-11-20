@@ -43,33 +43,38 @@ where
 
 // ==================== operarions on Qflags ===========
 
-// The arithmetic to put two flags on same denominator
+/// Arithmetic to to put two scaled vectors on same denominator
+///
+/// If `f1 = v1 / scale1` and `f2 = v2 / scale2`, then
+/// `matching_scales(scale1, scale2)` returns `(c1, c2, scale)`
+/// such that  `f1 = v1 * c1 / scale` and `f2 = v2 * c2 / scale`.
 fn matching_scales<N>(scale1: u64, scale2: u64) -> (N, N, u64)
 where
     N: NumCast,
 {
-    let scale = scale1.gcd(&scale2);
-    let c1 = N::from(scale1 / scale).unwrap();
-    let c2 = N::from(scale2 / scale).unwrap();
+    let gcd = scale1.gcd(&scale2);
+    let c1 = N::from(scale2 / gcd).unwrap();
+    let c2 = N::from(scale1 / gcd).unwrap();
+    let scale = (scale1 / gcd) * scale2;
     (c1, c2, scale)
 }
 
-impl<'a, N, F> Add for &'a QFlag<N, F>
+impl<N, F> Add<&Self> for QFlag<N, F>
 where
     N: Clone + NumCast + Num + ScalarOperand,
     F: Flag,
 {
-    type Output = QFlag<N, F>;
+    type Output = Self;
 
-    fn add(self, other: Self) -> Self::Output {
+    fn add(self, other: &Self) -> Self::Output {
         assert_eq!(self.basis, other.basis);
         assert_eq!(self.data.len(), other.data.len());
         let (a1, a2, scale) = matching_scales::<N>(self.scale, other.scale);
         QFlag {
             basis: self.basis,
-            data: &self.data * a1 + &other.data * a2,
+            data: self.data * a1 + &other.data * a2,
             scale,
-            expr: Expr::add(self.expr.clone(), other.expr.clone()),
+            expr: Expr::add(self.expr, other.expr.clone()),
         }
     }
 }
@@ -82,7 +87,7 @@ where
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
-        &self + &other
+        self + &other
     }
 }
 
@@ -327,6 +332,15 @@ where
     }
 }
 
+impl<N, F> QFlag<N, F> {
+    /// Return the same element with modified pretty-print expression
+    pub fn with_expr(mut self, expr: Expr) -> Self {
+        self.expr = expr;
+        self
+    }
+}
+
+
 // ===============
 impl<N, F> QFlag<N, F>
 where
@@ -361,6 +375,13 @@ where
     {
         self.at_least(N::zero())
     }
+    /// Return the equality "`self` = `n`".
+    pub fn equal(self, n: N) -> Ineq<N, F>
+    where
+        N: Clone + Neg<Output = N>,
+    {
+        self.at_least(n).equality()
+    }
 }
 
 /// Return the inequalities expressing that the sum of the flags of `basis`
@@ -370,8 +391,7 @@ where
     F: Flag,
     N: Num + Clone + Neg<Output = N> + NumCast + Display,
 {
-    let one: QFlag<N, F> = basis.one();
-    one.at_least(N::one()).equality()
+    basis.one().equal(N::one())
 }
 
 /// Return the inequalities expressing that the flags of `basis`
@@ -393,7 +413,7 @@ where
     }
     let meta = IneqMeta {
         basis,
-        flag_expr: Expr::Num(String::from("x")),
+        flag_expr: Expr::Num(format!("flag({})", basis.print_concise())),
         bound_expr: Expr::Zero,
     };
     Ineq { meta, data }
@@ -505,6 +525,7 @@ where
         }
     }
 
+    // From profiling: Memory allocation here could be optimized
     fn multiply_by_all(self, table: &[CsMat<u64>], acc: &mut Vec<Self>)
     where
         N: Copy + AddAssign + SubAssign + ScalarOperand + NumCast,
@@ -514,12 +535,12 @@ where
         let pre_result: Vec<_> = table
             .iter()
             .map(|m| vector_matrix_mul(&m.transpose_view(), &one_sided.flag))
-            .collect();
+            .collect(); // FIXME: This .collect() seems to be slow
         if let Some(other_size) = pre_result.first().map(|v| v.len()) {
             for i in 0..other_size {
                 let vec: Vec<_> = pre_result.iter().map(|x| x[i]).collect();
                 let ineq_data = Self {
-                    flag: ArrayBase::from_vec(vec),
+                    flag: ArrayBase::from(vec),
                     bound: N::zero(),
                 };
                 acc.push(ineq_data)
@@ -559,7 +580,19 @@ where
         self.data.append(&mut opposite_data);
         self
     }
+
+    /// If self is "`f ≥ x`", returns "`f ≥ x - eps`".
+    pub fn relaxed(mut self, eps: N) -> Self
+    where
+        N: SubAssign,
+    {
+        for ineq in &mut self.data {
+            ineq.bound -= eps.clone()
+        }
+        self
+    }
 }
+
 
 impl<N, F> Ineq<N, F>
 where
@@ -627,7 +660,7 @@ where
     /// If self is "`f` ≥ `x`", return the set of inequalities "`〚f*g〛 ≥ x.〚g〛`",
     /// where `g` is chosen such that `〚f*g〛` is a vector of `outbasis`.
     pub fn multiply_and_unlabel(self, outbasis: Basis<F>) -> Self {
-        assert!(outbasis.t == Type::empty());
+        assert_eq!(outbasis.t, Type::empty());
         let unlabeling = Unlabeling::total(self.meta.basis.t);
         let other = outbasis.with_type(self.meta.basis.t) / self.meta.basis;
         let splitcount = SplitCount::from_input(&self.meta.basis, &other);
@@ -654,4 +687,19 @@ where
     F: Flag,
 {
     Basis::new(f.size()).flag(f)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_internals() {
+        // matching_scales
+        assert_eq!(matching_scales(15, 12), (4, 5, 60));
+        assert_eq!(matching_scales(2, 24), (12, 1, 24));
+        let (c1, c2, scale): (u64, u64, _) = matching_scales(1788, 2444);
+        let big = 1788 * 2444 * 1048;
+        assert_eq!((big * c1) / scale, big / 1788);
+        assert_eq!((big * c2) / scale, big / 2444);
+    }
 }

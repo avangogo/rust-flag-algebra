@@ -5,7 +5,6 @@ use crate::combinatorics::*;
 use crate::density::*;
 use crate::flag::Flag;
 use crate::prettyprint::Expr;
-use canonical_form::*;
 use ndarray::*;
 use num::*;
 use serde::de::DeserializeOwned;
@@ -110,12 +109,33 @@ impl Type {
     pub fn empty() -> Self {
         Self::new(0, 0)
     }
+    /// Return wether the input has size zero
+    pub fn is_empty(&self) -> bool {
+        self == &Self::empty()
+    }
     /// Write string that identify the type.
     pub fn to_string(&self) -> String {
         if *self == Self::empty() {
             String::new()
         } else {
             format!("type_{}_id_{}", self.size, self.id)
+        }
+    }
+    pub fn from_flag<F: Flag>(g: &F) -> Self {
+        let size = g.size();
+        let reduced_g = g.canonical();
+        let id = Basis::new(size)
+            .get()
+            .binary_search(&reduced_g)
+            .expect("Flag not found");
+        Self { size, id }
+    }
+    /// Print the basis information in a short way
+    pub fn print_concise(&self) -> String {
+        if self.is_empty() {
+            String::new()
+        } else {
+            format!("{},id{}", self.size, self.id)
         }
     }
 }
@@ -158,6 +178,14 @@ impl<F: Flag> Basis<F> {
     /// Basis of flag with same size as `self` without type `t`.
     pub fn without_type(&self) -> Self {
         self.with_type(Type::empty())
+    }
+    /// Print the basis information in a short way
+    pub fn print_concise(&self) -> String {
+        if self.t == Type::empty() {
+            format!("{}", self.size)
+        } else {
+            format!("{},{},id{}", self.size, self.t.size, self.t.id)
+        }
     }
 }
 
@@ -243,7 +271,7 @@ impl<F: Flag> SplitCount<F> {
         Basis::make(self.left_size, self.type_)
     }
 
-    fn right_basis(&self) -> Basis<F> {
+    pub fn right_basis(&self) -> Basis<F> {
         Basis::make(self.right_size, self.type_)
     }
 
@@ -370,7 +398,7 @@ impl<F: Flag> Unlabeling<F> {
             let basis = self.basis.get();
             let unlab_basis = self.basis.without_type().get();
             let flag = &basis[self.flag];
-            let unlab_id = unlab_basis.binary_search(&canonical_form(flag)).unwrap();
+            let unlab_id = unlab_basis.binary_search(&flag.canonical()).unwrap();
             Type::new(self.basis.size, unlab_id)
         }
     }
@@ -382,8 +410,8 @@ impl<F: Flag> Unlabeling<F> {
     /// the untyping operator.
     pub fn eta(&self) -> Vec<usize> {
         let flag = &self.basis.get()[self.flag];
-        let mut morphism = canonical_form_morphism(flag);
-        morphism.resize(self.basis.t.size, 0);
+        let mut morphism = flag.morphism_to_canonical();
+        morphism.truncate(self.basis.t.size);
         morphism
     }
 }
@@ -408,8 +436,8 @@ impl<F: Flag> Savable<Vec<usize>, F> for UnlabelingFlag<F> {
 
 #[derive(Clone, Copy, Debug)]
 pub struct MulAndUnlabeling<F> {
-    split: SplitCount<F>,
-    unlabeling: Unlabeling<F>,
+    pub split: SplitCount<F>,
+    pub unlabeling: Unlabeling<F>,
 }
 
 impl<F> Display for MulAndUnlabeling<F> {
@@ -532,10 +560,11 @@ impl<F: Flag> Savable<Vec<u64>, F> for UnlabelingCount<F> {
 
 impl<F> UnlabelingCount<F> {
     pub fn denom(&self) -> u64 {
-        let initial_type_size = self.unlabeling.basis.t.size;
-        let choices = (self.unlabeling.basis.size - initial_type_size) as u64;
-        let total = (self.size - initial_type_size) as u64;
-        product(total, total - choices - 1)
+        let new_type_size = self.unlabeling.basis.t.size;
+        let old_type_size = self.unlabeling.basis.size;
+        let choices = (old_type_size - new_type_size) as u64;
+        let free_vertices = (self.size - new_type_size) as u64;
+        product(free_vertices + 1 - choices, free_vertices)
     }
 }
 
@@ -583,9 +612,9 @@ where
             .collect();
         QFlag {
             basis: self,
-            data: Array::from_vec(data),
+            data: Array::from(data),
             scale: 1,
-            expr: Expr::Num(String::from("random")),
+            expr: Expr::Num(format!("random({})", self.print_concise())),
         }
     }
 
@@ -604,7 +633,7 @@ where
             basis: self,
             data: Array::zeros(size),
             scale: 1,
-            expr: Expr::Num(String::from("from_id")),
+            expr: Expr::Num(format!("flag({}:{})", id, self.print_concise())),
         };
         res.data[id] = N::one();
         res
@@ -617,25 +646,26 @@ where
         assert_eq!(self.size, f.size());
         let flags = self.get();
         let mut data = Array::zeros(flags.len());
-        let f1 = canonical_form_typed(f, self.t.size);
-        data[flags.binary_search(&f1).expect("Flag not found in basis")] = N::one();
+        let f1 = f.canonical_typed(self.t.size);
+        let id = flags.binary_search(&f1).expect("Flag not found in basis");
+        data[id] = N::one();
         QFlag {
             basis: self,
             data,
             scale: 1,
-            expr: Expr::Num(String::from("flag")),
+            expr: Expr::Num(format!("flag({}:{})", id, self.print_concise())),
         }
     }
     pub fn from_vec<N>(self, vec: Vec<N>) -> QFlag<N, F> {
         assert_eq!(self.get().len(), vec.len());
         QFlag {
             basis: self,
-            data: Array::from_vec(vec),
+            data: Array::from(vec),
             scale: 1,
-            expr: Expr::Num(String::from("from_vec")),
+            expr: Expr::Num(format!("from_vec({})", self.print_concise())),
         }
     }
-    pub fn from_indicator<M, N, P>(self, mut f: P) -> QFlag<N, F>
+    pub fn from_coeff<M, N, P>(&self, mut f: P) -> QFlag<N, F>
     where
         M: Into<N>,
         P: FnMut(&F, usize) -> M,
@@ -646,17 +676,30 @@ where
             vec.push(f(g, self.t.size).into())
         }
         QFlag {
-            basis: self,
-            data: Array::from_vec(vec),
+            basis: *self,
+            data: Array::from(vec),
             scale: 1,
             expr: Expr::Num(String::from("sum f(F)F")),
         }
+    }
+    pub fn from_indicator<N, P>(&self, mut f: P) -> QFlag<N, F>
+    where
+        N: One + Zero,
+        P: FnMut(&F, usize) -> bool,
+    {
+        self.from_coeff(|flag, type_size| {
+            if f(flag, type_size) {
+                N::one()
+            } else {
+                N::zero()
+            }
+        })
     }
     pub fn all_cs(&self) -> Vec<MulAndUnlabeling<F>> {
         let mut res = Vec::new();
         let n = self.size;
         // m: size of a cs basis
-        for m in (n + self.t.size + 1) / 2..=(2 * n - 1) / 2 {
+        for m in (n + self.t.size) / 2 + 1..=(2 * n - 1) / 2 {
             let sigma = 2 * m - n;
             let unlab_basis = Self::new(sigma).with_type(self.t);
             for unlab_id in 0..unlab_basis.get().len() {
@@ -675,7 +718,7 @@ where
     N: Num + Clone,
     F: Flag,
 {
-    let flag = canonical_form_typed(f, type_size);
+    let flag = f.canonical_typed(type_size);
     let type_ = flag.induce(&(0..type_size).collect::<Vec<_>>()); // type
     let type_basis = Basis::new(type_size);
     let type_id = type_basis
@@ -698,6 +741,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::flag::SubClass;
     use crate::flags::*;
 
     #[test]
@@ -710,6 +754,21 @@ mod tests {
         assert_eq!(Basis::<Digraph>::new(5).get().len(), 582);
         assert_eq!(Basis::<Digraph>::make(3, Type::new(1, 0)).get().len(), 15);
         assert_eq!(Basis::<Digraph>::make(4, Type::new(2, 0)).get().len(), 126);
+        //
+        assert_eq!(
+            Basis::<SubClass<Digraph, TriangleFree>>::new(3).get().len(),
+            6
+        );
+        assert_eq!(
+            Basis::<SubClass<Digraph, TriangleFree>>::new(5).get().len(),
+            317
+        );
+        assert_eq!(
+            Basis::<SubClass<Digraph, TriangleFree>>::make(3, Type::new(2, 1))
+                .get()
+                .len(),
+            8
+        );
     }
     #[test]
     fn splitcount() {
@@ -750,13 +809,13 @@ mod tests {
         let unlabeling = Unlabeling::<Graph>::total(t);
         let _mau = MulAndUnlabeling::new(SplitCount::make(3, 2, t), unlabeling).get();
     }
-//     #[test]
-//     fn unlabeling_eta() {
-//         let b = Basis::<Graph>::new(5).with_type(Type::new(3, 1));
-//         let unlabeling = Unlabeling::new(b, 1);
-//         let eta = unlabeling.eta();
-//         let g = &unlabeling.basis.get()[unlabeling.flag];
-//         let t = unlabeling.basis.t;
-//         assert_eq!(g.induce(&eta), Basis::new(t.size).get()[t.id])
-//     }
+    //     #[test]
+    //     fn unlabeling_eta() {
+    //         let b = Basis::<Graph>::new(5).with_type(Type::new(3, 1));
+    //         let unlabeling = Unlabeling::new(b, 1);
+    //         let eta = unlabeling.eta();
+    //         let g = &unlabeling.basis.get()[unlabeling.flag];
+    //         let t = unlabeling.basis.t;
+    //         assert_eq!(g.induce(&eta), Basis::new(t.size).get()[t.id])
+    //     }
 }

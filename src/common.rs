@@ -15,15 +15,15 @@ pub trait FlatMatrix: Sized {
     type Item;
     /// Iterator on one line of the matrix.
     type LineIter: Iterator<Item = usize>;
-    type IndexIter: Iterator<Item = (usize, usize)>;
+    type IndexIter: Iterator<Item = (usize, usize, usize)>;
     // needed
     /// Length of the underlying vector depending on the number of
     /// line of the matrix.
     fn data_size(size: usize) -> usize;
     /// Direct access to the underlying vector
-    fn get_vec(&self) -> &Vec<Self::Item>;
+    fn data(&self) -> &[Self::Item];
     /// Mutable access to the underlying vector
-    fn get_vec_mut(&mut self) -> &mut Vec<Self::Item>;
+    fn data_mut(&mut self) -> &mut Vec<Self::Item>;
     /// Create a matrix by wrapping the underlying vector.
     fn from_vec(_: Vec<Self::Item>) -> Self;
     /// Map a pair of indices to the corresponding index in the matrix.
@@ -31,12 +31,14 @@ pub trait FlatMatrix: Sized {
     /// Iterator on every non-symetric entries of the matrix.
     fn index_iter(n: usize) -> Self::IndexIter;
     /// Iterator on every non-symetric index an line `v`.
+    fn halfline_iter(v: usize) -> Range<usize>;
+    /// Iterator on every non-symetric index an line `v`.
     fn line_iter(n: usize, v: usize) -> Self::LineIter;
     // recommended
     /// Give the number of line of the matrix
     fn possible_size(&self) -> usize {
         let mut res = 0;
-        let data_size = self.get_vec().len();
+        let data_size = self.data().len();
         loop {
             debug_assert!(Self::data_size(res) <= data_size);
             if Self::data_size(res) == data_size {
@@ -53,12 +55,12 @@ pub trait FlatMatrix: Sized {
     where
         Self::Item: Clone,
     {
-        self.get_vec()[Self::flat_index(i, j)].clone()
+        self.data()[Self::flat_index(i, j)].clone()
     }
     /// Redefine a matrix entry.
     #[inline]
     fn set(&mut self, ij: (usize, usize), v: Self::Item) {
-        self.get_vec_mut()[Self::flat_index(ij.0, ij.1)] = v
+        self.data_mut()[Self::flat_index(ij.0, ij.1)] = v
     }
     #[inline]
     /// Create a new matrix with `n` lines filled with `elem`.
@@ -75,7 +77,7 @@ pub trait FlatMatrix: Sized {
     where
         Self::Item: Clone,
     {
-        self.get_vec_mut().resize(Self::data_size(n), e)
+        self.data_mut().resize(Self::data_size(n), e)
     }
 }
 
@@ -88,7 +90,7 @@ use std;
 impl<A> FlatMatrix for Sym<A> {
     type Item = A;
     type LineIter = Range<usize>;
-    type IndexIter = Box<dyn Iterator<Item = (usize, usize)>>;
+    type IndexIter = Box<dyn Iterator<Item = (usize, usize, usize)>>;
     #[inline]
     fn data_size(size: usize) -> usize {
         (size * (size + 1)) / 2
@@ -102,11 +104,11 @@ impl<A> FlatMatrix for Sym<A> {
         Self::data_size(j) + i
     }
     #[inline]
-    fn get_vec(&self) -> &Vec<A> {
+    fn data(&self) -> &[A] {
         &self.0
     }
     #[inline]
-    fn get_vec_mut(&mut self) -> &mut Vec<A> {
+    fn data_mut(&mut self) -> &mut Vec<A> {
         &mut self.0
     }
     #[inline]
@@ -115,12 +117,16 @@ impl<A> FlatMatrix for Sym<A> {
     }
     #[inline]
     fn index_iter(n: usize) -> Self::IndexIter {
-        Box::new((0..n).flat_map(move |j| (0..=j).map(move |i| (i, j))))
+        Box::new((0..n).flat_map(move |j| (0..=j).map(move |i| (i, j, Self::data_size(j) + i))))
     }
     #[inline]
     fn line_iter(n: usize, v: usize) -> Self::LineIter {
         debug_assert!(v <= n);
         (0..n)
+    }
+    #[inline]
+    fn halfline_iter(v: usize) -> Range<usize> {
+        0..(v + 1)
     }
 }
 
@@ -145,7 +151,7 @@ pub struct SymNonRefl<A>(Vec<A>);
 impl<A> FlatMatrix for SymNonRefl<A> {
     type Item = A;
     type LineIter = Chain<Range<usize>, Range<usize>>;
-    type IndexIter = Box<dyn Iterator<Item = (usize, usize)>>;
+    type IndexIter = Box<dyn Iterator<Item = (usize, usize, usize)>>;
 
     fn data_size(size: usize) -> usize {
         if size == 0 {
@@ -162,21 +168,25 @@ impl<A> FlatMatrix for SymNonRefl<A> {
         debug_assert!(j > i);
         Self::data_size(j) + i
     }
-    fn get_vec(&self) -> &Vec<A> {
+    fn data(&self) -> &[A] {
         &self.0
     }
-    fn get_vec_mut(&mut self) -> &mut Vec<A> {
+    fn data_mut(&mut self) -> &mut Vec<A> {
         &mut self.0
     }
     fn from_vec(v: Vec<A>) -> Self {
         SymNonRefl(v)
     }
     fn index_iter(n: usize) -> Self::IndexIter {
-        Box::new((0..n).flat_map(move |j| (0..j).map(move |i| (i, j))))
+        Box::new((0..n).flat_map(move |j| (0..j).map(move |i| (i, j, Self::data_size(j) + i))))
     }
     fn line_iter(n: usize, v: usize) -> Self::LineIter {
         debug_assert!(v <= n);
         (0..v).chain(v + 1..n)
+    }
+    #[inline]
+    fn halfline_iter(v: usize) -> Range<usize> {
+        0..v
     }
 }
 
@@ -214,7 +224,7 @@ where
 {
     type Item = A;
     type LineIter = Chain<Range<usize>, Range<usize>>;
-    type IndexIter = Box<dyn Iterator<Item = (usize, usize)>>;
+    type IndexIter = Box<dyn Iterator<Item = (usize, usize, usize)>>;
 
     fn data_size(size: usize) -> usize {
         SymNonRefl::<A>::data_size(size)
@@ -226,17 +236,17 @@ where
             Self::flat_index_raw(j, i)
         }
     }
-    fn get_vec(&self) -> &Vec<A> {
+    fn data(&self) -> &[A] {
         &self.0
     }
-    fn get_vec_mut(&mut self) -> &mut Vec<A> {
+    fn data_mut(&mut self) -> &mut Vec<A> {
         &mut self.0
     }
     fn from_vec(v: Vec<A>) -> Self {
         AntiSym(v)
     }
     fn index_iter(n: usize) -> Self::IndexIter {
-        Box::new((0..n).flat_map(move |i| (0..i).map(move |j| (i, j))))
+        Box::new((0..n).flat_map(move |i| (0..i).map(move |j| (i, j, Self::flat_index_raw(j, i)))))
     }
     fn line_iter(n: usize, v: usize) -> Self::LineIter {
         debug_assert!(v <= n);
@@ -257,31 +267,34 @@ where
             self.0[Self::flat_index_raw(j, i)] = -v
         }
     }
+    #[inline]
+    fn halfline_iter(v: usize) -> Range<usize> {
+        0..v
+    }
 }
 
 /// A trait that gives access to the list of the possible values
 /// of a type.
-pub trait Enum: Sized {
+pub trait Enum: Sized + 'static {
     /// List of possible values of `Self`.
-    fn variants() -> Vec<Self>;
+    const VARIANTS: &'static [Self];
+    const NVARIANTS: usize;
 }
 
 impl Enum for bool {
-    fn variants() -> Vec<Self> {
-        vec![true, false]
-    }
+    const VARIANTS: &'static [Self] = &[true, false];
+    const NVARIANTS: usize = 2;
 }
 
 impl Enum for Arc {
-    fn variants() -> Vec<Self> {
-        vec![Arc::Edge, Arc::BackEdge, Arc::None]
-    }
+    const VARIANTS: &'static [Self] = &[Arc::Edge, Arc::BackEdge, Arc::None];
+    const NVARIANTS: usize = 3;
 }
 
 /// Generic trait for binary relations.
 pub trait BinRelation: Ord + Debug + Clone {
     fn invariant(&self, v: usize) -> Vec<Vec<usize>>;
-    fn invariant_size() -> usize;
+    const INVARIANT_SIZE: usize;
     fn induce(&self, p: &[usize]) -> Self;
     fn empty() -> Self;
     fn extensions(&self, n: usize) -> Vec<Self>;
@@ -293,33 +306,32 @@ where
     S::Item: Enum + Ord + Clone + Copy + Debug + Default,
 {
     fn invariant(&self, v: usize) -> Vec<Vec<usize>> {
-        let mut variants = S::Item::variants();
-        variants.sort();
-        let mut res: Vec<Vec<usize>> = vec![Vec::new(); variants.len() - 1];
+        let mut res: Vec<Vec<usize>> = vec![Vec::new(); S::Item::NVARIANTS];
         let n = self.possible_size();
         for u in Self::line_iter(n, v) {
             let val = self.get(u, v);
-            let e = variants.iter().position(|x| x == &val).unwrap();
-            if e < variants.len() - 1 {
-                res[e].push(u);
+            if val != S::Item::VARIANTS[0] {
+                for (i, var) in S::Item::VARIANTS[1..].iter().enumerate() {
+                    if var == &val {
+                        res[i].push(u);
+                        break;
+                    }
+                }
             }
         }
         res
     }
-    fn invariant_size() -> usize {
-        S::Item::variants().len() - 1
-    }
+    const INVARIANT_SIZE: usize = S::Item::NVARIANTS - 1;
     fn extensions(&self, n: usize) -> Vec<Self> {
-        assert_eq!(self.get_vec().len(), Self::data_size(n));
+        assert_eq!(self.data().len(), Self::data_size(n));
         let mut res = Vec::new();
-        let variants = S::Item::variants();
         let line_size = Self::line_iter(n + 1, n).count();
-        let mut iter = iterators::Functions::new(line_size, variants.len());
+        let mut iter = iterators::Functions::new(line_size, S::Item::NVARIANTS);
         while let Some(f) = iter.next() {
             let mut new = self.clone();
             new.resize(n + 1, S::Item::default());
             for v in Self::line_iter(n + 1, n) {
-                new.get_vec_mut()[Self::flat_index(v, n)] = variants[f[v]];
+                new.data_mut()[Self::flat_index(v, n)] = S::Item::VARIANTS[f[v]];
             }
             res.push(new);
         }
@@ -331,8 +343,12 @@ where
     {
         let n = p.len();
         let mut res = Self::new(S::Item::default(), n);
-        for (u1, u2) in Self::index_iter(n) {
-            res.set((u1, u2), self.get(p[u1], p[u2]));
+        let data = res.data_mut();
+        for u in 0..n {
+            let key_u = Self::data_size(u);
+            for v in Self::halfline_iter(u) {
+                data[key_u + v] = self.get(p[u], p[v])
+            }
         }
         res
     }
@@ -353,9 +369,7 @@ where
         res.append(&mut self.1.invariant(v));
         res
     }
-    fn invariant_size() -> usize {
-        R1::invariant_size() + R2::invariant_size()
-    }
+    const INVARIANT_SIZE: usize = R1::INVARIANT_SIZE + R2::INVARIANT_SIZE;
     fn induce(&self, p: &[usize]) -> Self {
         (self.0.induce(p), self.1.induce(p))
     }
@@ -374,6 +388,7 @@ where
         res
     }
 }
+
 // size 3
 impl<R1, R2, R3> BinRelation for (R1, R2, R3)
 where
@@ -387,9 +402,7 @@ where
         res.append(&mut self.2.invariant(v));
         res
     }
-    fn invariant_size() -> usize {
-        R1::invariant_size() + R2::invariant_size() + R3::invariant_size()
-    }
+    const INVARIANT_SIZE: usize = R1::INVARIANT_SIZE + R2::INVARIANT_SIZE + R3::INVARIANT_SIZE;
     fn induce(&self, p: &[usize]) -> Self {
         (self.0.induce(p), self.1.induce(p), self.2.induce(p))
     }
@@ -436,7 +449,7 @@ mod tests {
         }
         // injectivity of index_iter
         let mut x = S::new(0, n);
-        for (u, v) in S::index_iter(n) {
+        for (u, v, _uv) in S::index_iter(n) {
             assert_eq!(x.get(u, v), 0);
             x.set((u, v), 1);
         }

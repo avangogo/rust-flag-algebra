@@ -13,6 +13,7 @@ pub fn product<T>(start: T, end: T) -> T
 where
     T: PrimInt,
 {
+    assert!(start <= end + T::one());
     let mut res = T::one();
     for x in range(start, end + T::one()) {
         res = res * x;
@@ -90,14 +91,12 @@ pub fn permutation_of_injection(n: usize, t: &[usize]) -> Vec<usize> {
     res
 }
 
-/*
 /// Returns the array `[ p[q[0]],..., p[q[n-1]] ]`.
 /// The image of `q` must be contained in `[p.len()]`.
-pub fn compose(p : &[usize], q : &[usize]) -> Vec<usize> {
+pub fn compose(p: &[usize], q: &[usize]) -> Vec<usize> {
     debug_assert_eq!(p.len(), q.len());
     q.iter().map(|&x| p[x]).collect()
 }
-*/
 
 /// Tests
 #[cfg(test)]
@@ -120,6 +119,8 @@ mod tests {
     #[test]
     fn unit_binomial() {
         assert_eq!(35, binomial(3, 7));
+        assert_eq!(10, binomial(2, 5));
+        assert_eq!(42, binomial(1, 42));
         assert_eq!(0, binomial(5, 4));
         assert_eq!(0, binomial(-1, 4));
     }

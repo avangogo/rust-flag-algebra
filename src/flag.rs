@@ -2,7 +2,7 @@
 
 use crate::combinatorics::*;
 use crate::iterators::*;
-use canonical_form::*;
+use canonical_form::Canonize;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp;
@@ -26,11 +26,14 @@ where
     /// Return the list of flags of size `self.size() + 1` that contain `self`
     /// as an induced subflag.
     ///
-    /// This list can have redundancy and is a priori not reduced modulo isomorphism.
+    /// This list can have redundancy and is a priori not reduced modulo isomorphism.    
     fn superflags(&self) -> Vec<Self>;
     /// A name for this type of flags. For instance "Graph".
     /// This name is used for naming the associated data subdirectory.
     const NAME: &'static str;
+
+    // caracteristic
+    const HEREDITARY: bool = true;
 
     // provided methods
     /// Return the list of flags of size `self.size() + 1` that contain `self`
@@ -39,7 +42,7 @@ where
         let mut res: BTreeSet<Self> = BTreeSet::new();
         for g in previous {
             for h in g.superflags() {
-                let _ = res.insert(canonical_form(&h));
+                let _ = res.insert(h.canonical());
             }
         }
         res.into_iter().collect()
@@ -58,16 +61,26 @@ where
     /// flag `type_flag`.
     /// Each different way to root this flag give a different flag in the result.
     fn generate_typed_up(type_flag: &Self, g_vec: &[Self]) -> Vec<Self> {
+        assert!(g_vec.len() != 0);
         let n = g_vec[0].size();
         let k = type_flag.size();
         assert!(k <= n);
         let mut res: BTreeSet<Self> = BTreeSet::new();
         for g in g_vec {
-            let mut iter = Injection::new(n, k);
-            while let Some(selection) = iter.next() {
-                if g.induce(selection) == *type_flag {
-                    let p = invert(&permutation_of_injection(n, selection));
-                    let _ = res.insert(canonical_form_typed(&g.apply_morphism(&p), k));
+            // For every subset of size k
+            let mut iter = Choose::new(n, k);
+            while let Some(pre_selection) = iter.next() {
+                // If this subset induces the right type, then test all permutations
+                if &g.induce(pre_selection).canonical() == type_flag {
+                    let mut iter2 = Injection::permutation(k);
+                    while let Some(select2) = iter2.next() {
+                        let selection = &compose(pre_selection, select2);
+                        let h = g.induce(selection);
+                        if &h == type_flag {
+                            let p = invert(&permutation_of_injection(n, selection));
+                            let _ = res.insert(g.apply_morphism(&p).canonical_typed(k));
+                        }
+                    }
                 }
             }
         }
@@ -106,6 +119,7 @@ impl<F, A> From<F> for SubClass<F, A> {
 }
 
 impl<F: Flag, A> Clone for SubClass<F, A> {
+    #[inline]
     fn clone(&self) -> Self {
         self.content.clone().into()
     }
@@ -166,9 +180,11 @@ where
     F: Flag,
     Self: Sized,
 {
-    fn subclass_superflags(flag: &SubClass<F, Self>) -> Vec<SubClass<F, Self>>;
+    fn is_in_subclass(flag: &F) -> bool;
 
     const SUBCLASS_NAME: &'static str;
+
+    const HEREDITARY: bool = true;
 }
 
 impl<F, A> Canonize for SubClass<F, A>
@@ -194,8 +210,16 @@ where
 {
     const NAME: &'static str = A::SUBCLASS_NAME;
 
+    const HEREDITARY: bool = A::HEREDITARY;
+
     fn superflags(&self) -> Vec<Self> {
-        A::subclass_superflags(self)
+        let mut res = Vec::new();
+        for flag in self.content.superflags().into_iter() {
+            if A::is_in_subclass(&flag) {
+                res.push(flag.into())
+            }
+        }
+        res
     }
     // inherited methods
     fn induce(&self, p: &[usize]) -> Self {
