@@ -27,8 +27,8 @@ fn is_hamiltonian(g: &Graph) -> bool {
 pub fn main() {
     let b = Basis::<Graph>::new(5);
     let flags_with_c5: QFlag<i64, _> =
-        b.from_indicator(|g, _| if is_hamiltonian(g) { 1 } else { 0 });
-    let edge = Basis::new(2).flag(&Graph::new(2, &[]));
+        b.from_indicator(|g, _| is_hamiltonian(g) );
+    let edge = flag(&Graph::new(2, &[]));
     let pb = Problem {
         ineqs: vec![
             total_sum_is_one(b),
