@@ -1,9 +1,6 @@
-//use crate::common::*;
-use crate::flag::Flag; //, SubClass, SubFlag};
+use crate::flag::Flag;
 use canonical_form::Canonize;
 use core::marker::PhantomData;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 use std::cmp::*;
 use std::fmt;
 use std::fmt::{Debug, Display};
@@ -27,7 +24,7 @@ impl<F: Flag, N> Display for Colored<F, N> {
 impl<F, N> Flag for Colored<F, N>
 where
     F: Flag,
-    N: Unsigned + Clone + Eq + Ord + Debug + Serialize + DeserializeOwned,
+    N: Unsigned + Clone + Eq + Ord + Debug,
 {
     /// Returns the subflag induced by the vertices in the slice `set`.
     fn induce(&self, set: &[usize]) -> Self {
@@ -74,7 +71,7 @@ where
 impl<F, N> Canonize for Colored<F, N>
 where
     F: Flag,
-    N: Unsigned + Clone + Eq + Ord + Debug + Serialize + DeserializeOwned,
+    N: Unsigned + Clone + Eq + Ord,
 {
     #[inline]
     fn size(&self) -> usize {
@@ -83,11 +80,39 @@ where
     fn invariant_neighborhood(&self, v: usize) -> Vec<Vec<usize>> {
         self.content.invariant_neighborhood(v)
     }
+    fn invariant_coloring(&self) -> Option<Vec<u64>> {
+        Some(self.color.iter().map(|&c|{ c as u64 }).collect())
+    }
     fn apply_morphism(&self, p: &[usize]) -> Self {
+        let mut color : Vec<u8> = vec![N::U8; p.len()];
+        for (i, &pi) in p.iter().enumerate() {
+            color[pi] = self.color[i]
+        }
         Self {
             content: self.content.apply_morphism(p),
-            color: p.iter().map(|i| self.color[*i]).collect(),
+            color: color,
             phantom: PhantomData,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::flags::Graph;
+    use canonical_form::Canonize;
+    use typenum::*;
+    #[test]
+    fn test_colored() {
+        type G2 = Colored<Graph, U2>;
+        let p3 =  Graph::new(3, &[(0, 1), (1, 2)]);
+        let g: G2 = Colored { content: p3.clone(), color: vec!(0, 0, 1), phantom: PhantomData };
+        let h: G2 = Colored { content: p3.clone(), color: vec!(1, 0, 0), phantom: PhantomData };
+        assert_eq!(g.canonical(), h.canonical());
+        type G1 = Colored<Graph, U1>;
+        assert_eq!(G1::generate(5).len(), 34);
+        type G5 = Colored<Graph, U5>;
+        assert_eq!(G5::generate(2).len(), 30);
+        assert_eq!(G2::generate(3).len(), 20);
     }
 }
