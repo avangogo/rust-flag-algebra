@@ -170,12 +170,8 @@ impl Flag for Digraph {
 
     const NAME: &'static str = "Digraph";
 
-    fn all_flags(n: usize) -> Vec<Self> {
-        if n == 0 {
-            vec![Self::empty(0)]
-        } else {
-            unimplemented!()
-        }
+    fn size_zero_flags() -> Vec<Self> {
+        vec![Self::empty(0)]
     }
 
     fn superflags(&self) -> Vec<Self> {

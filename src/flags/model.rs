@@ -48,15 +48,11 @@ where
 
     const NAME: &'static str = "Model";
 
-    fn all_flags(n: usize) -> Vec<Self> {
-        if n == 0 {
-            vec![Self {
-                size: 0,
-                rel: R::empty(),
-            }]
-        } else {
-            unimplemented!()
-        }
+    fn size_zero_flags() -> Vec<Self> {
+        vec![Self {
+            size: 0,
+            rel: R::empty(),
+        }]
     }
 
     fn superflags(&self) -> Vec<Self> {

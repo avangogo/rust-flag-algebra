@@ -52,17 +52,6 @@ pub fn pre_image(n: usize, t: &[usize]) -> Vec<Vec<usize>> {
     res
 }
 
-/// Inverts an injection from `[t.len()]` to `[n]`.
-pub fn pseudo_invert(n: usize, t: &[usize]) -> Vec<Option<usize>> {
-    //unsafe
-    let mut res = vec![None; n];
-    for (i, &v) in t.iter().enumerate() {
-        debug_assert_eq!(res[v], None); // Check if t is indeed injective
-        res[v] = Some(i);
-    }
-    res
-}
-
 /// Inverts a permutation.
 pub fn invert(t: &[usize]) -> Vec<usize> {
     let n = t.len();
@@ -123,14 +112,6 @@ mod tests {
         assert_eq!(42, binomial(1, 42));
         assert_eq!(0, binomial(5, 4));
         assert_eq!(0, binomial(-1, 4));
-    }
-
-    #[test]
-    fn unit_pseudo_invert() {
-        assert_eq!(
-            pseudo_invert(5, &[3, 1, 4]),
-            [None, Some(1), None, Some(0), Some(2)]
-        );
     }
 
     #[test]

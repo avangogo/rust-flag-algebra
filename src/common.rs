@@ -79,6 +79,21 @@ pub trait FlatMatrix: Sized {
     {
         self.data_mut().resize(Self::data_size(n), e)
     }
+    ///
+    fn induce0(&self, p: &[usize]) -> Self
+    where
+        Self::Item: Clone,
+    {
+        let n = p.len();
+        let mut data = Vec::with_capacity(Self::data_size(n));
+        for (u, &pu) in p.iter().enumerate() {
+            for &pv in &p[Self::halfline_iter(u)] {
+                data.push(self.get(pu, pv))
+            }
+        }
+        debug_assert_eq!(data.len(), Self::data_size(n));
+        Self::from_vec(data)
+    }
 }
 
 /// Relation R such that R(x,y) iff R(y,x).
@@ -303,7 +318,7 @@ pub trait BinRelation: Ord + Debug + Clone {
 impl<S> BinRelation for S
 where
     S: FlatMatrix + Debug + Clone + Ord,
-    S::Item: Enum + Ord + Clone + Copy + Debug + Default,
+    S::Item: Enum + Ord + Clone + Copy + Debug,
 {
     fn invariant(&self, v: usize) -> Vec<Vec<usize>> {
         let mut res: Vec<Vec<usize>> = vec![Vec::new(); S::Item::NVARIANTS];
@@ -325,35 +340,24 @@ where
     fn extensions(&self, n: usize) -> Vec<Self> {
         assert_eq!(self.data().len(), Self::data_size(n));
         let mut res = Vec::new();
-        let line_size = Self::line_iter(n + 1, n).count();
+        let extensions_size = Self::data_size(n + 1);
+        let line_size = Self::halfline_iter(n).len();
         let mut iter = iterators::Functions::new(line_size, S::Item::NVARIANTS);
         while let Some(f) = iter.next() {
-            let mut new = self.clone();
-            new.resize(n + 1, S::Item::default());
-            for v in Self::line_iter(n + 1, n) {
-                new.data_mut()[Self::flat_index(v, n)] = S::Item::VARIANTS[f[v]];
+            let mut data = Vec::with_capacity(extensions_size);
+            data.extend_from_slice(self.data());
+            for &variant_id in f {
+                data.push(S::Item::VARIANTS[variant_id]);
             }
-            res.push(new);
+            res.push(Self::from_vec(data));
         }
         res
     }
-    fn induce(&self, p: &[usize]) -> Self
-    where
-        S::Item: Default + Clone,
-    {
-        let n = p.len();
-        let mut res = Self::new(S::Item::default(), n);
-        let data = res.data_mut();
-        for u in 0..n {
-            let key_u = Self::data_size(u);
-            for v in Self::halfline_iter(u) {
-                data[key_u + v] = self.get(p[u], p[v])
-            }
-        }
-        res
+    fn induce(&self, p: &[usize]) -> Self {
+        self.induce0(p)
     }
     fn empty() -> Self {
-        Self::new(S::Item::default(), 0)
+        Self::from_vec(Vec::new())
     }
 }
 

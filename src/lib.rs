@@ -46,27 +46,50 @@
     unsafe_code,
     unstable_features,
     unused_import_braces,
-    unused_qualifications,
+    //unused_qualifications,
     unused_labels,
-    unused_results
+    //unused_results
 )]
 
 mod algebra;
 pub use crate::algebra::*;
 
-pub mod combinatorics;
-pub mod common;
+mod combinatorics;
+mod common;
 pub mod density;
+pub mod draw;
 pub mod flags;
-pub mod iterators;
+mod iterators;
 pub mod operator;
 pub use crate::operator::Basis;
 
-pub mod prettyprint;
+pub mod expr;
+mod reduction;
+pub mod report;
 pub mod sdp;
+pub mod sdpa;
+pub use crate::reduction::*;
 
 mod flag;
 pub use crate::flag::*;
 
 #[macro_use]
 extern crate serde_derive;
+
+use simplelog::*;
+pub fn init_default_log() {
+    let config = ConfigBuilder::new()
+        .set_max_level(LevelFilter::Error)
+        .set_target_level(LevelFilter::Off)
+        .set_thread_level(LevelFilter::Off)
+        .build();
+    TermLogger::init(LevelFilter::Info, config, TerminalMode::Mixed).unwrap();
+}
+pub fn init_debug_log() {
+    let config = ConfigBuilder::new()
+        .set_max_level(LevelFilter::Error)
+        .set_target_level(LevelFilter::Off)
+        .set_thread_level(LevelFilter::Off)
+        .build();
+    TermLogger::init(LevelFilter::Trace, config, TerminalMode::Mixed).unwrap();
+}

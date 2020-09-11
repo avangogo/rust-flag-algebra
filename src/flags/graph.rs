@@ -24,7 +24,7 @@ pub struct EdgeIterator<'a> {
 
 impl<'a> Iterator for EdgeIterator<'a> {
     type Item = (usize, usize);
-    
+
     fn next(&mut self) -> Option<Self::Item> {
         if self.u + 1 == self.v {
             self.u = 0;
@@ -34,16 +34,13 @@ impl<'a> Iterator for EdgeIterator<'a> {
         }
         if self.u >= self.g.size {
             None
+        } else if self.g.edge(self.u, self.v) {
+            Some((self.u, self.v))
         } else {
-            if self.g.edge(self.u, self.v) {
-                Some((self.u, self.v))
-            } else {
-                self.next()
-            }
+            self.next()
         }
     }
 }
-    
 
 impl Graph {
     /// Return the number of vertices in the graph
@@ -90,7 +87,7 @@ impl Graph {
         u != v && self.edge[(u, v)]
     }
 
-    pub fn edges<'a>(&'a self) -> EdgeIterator<'a> {
+    pub fn edges(&self) -> EdgeIterator {
         EdgeIterator {
             g: self,
             u: 0,
@@ -145,6 +142,7 @@ impl Canonize for Graph {
 
 impl Flag for Graph {
     fn induce(&self, p: &[usize]) -> Self {
+        debug_assert!(p.iter().all(|&i| { i < self.size }));
         let k = p.len();
         let mut res = Self::empty(k);
         for u1 in 0..k {
@@ -157,12 +155,8 @@ impl Flag for Graph {
 
     const NAME: &'static str = "Graph";
 
-    fn all_flags(n: usize) -> Vec<Self> {
-        if n == 0 {
-            vec![Self::empty(0)]
-        } else {
-            unimplemented!()
-        }
+    fn size_zero_flags() -> Vec<Self> {
+        vec![Self::empty(0)]
     }
 
     fn superflags(&self) -> Vec<Self> {

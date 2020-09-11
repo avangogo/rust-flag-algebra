@@ -155,15 +155,16 @@ impl StreamingIterator<[usize]> for Choose {
             self.untouched = false;
         } else {
             let mut i = self.k;
-            while {
-                // do ..
+            loop {
                 if i <= self.fixed {
                     return None;
                 } else {
                     i -= 1
-                }; // .. while ..
-                self.data[i] == self.n - self.k + i // loop condition
-            } {}
+                };
+                if self.data[i] != self.n - self.k + i {
+                    break;
+                }
+            }
             self.data[i] += 1;
             for j in (i + 1)..self.k {
                 self.data[j] = self.data[i] + j - i;
@@ -182,6 +183,7 @@ pub struct Split {
 
 impl Split {
     /// Create an iterator on partitions of [n] into two sets of respective size `k` and `n-k`.
+    #[allow(unused)]
     pub fn new(n: usize, k: usize) -> Self {
         Self::with_fixed_part(n, k, 0)
     }
@@ -199,14 +201,14 @@ impl Split {
     /// Because of the type of this function, `Split` does not implement
     /// the trait `StreamingIterator`.
     pub fn next(&mut self) -> Option<(&[usize], &[usize])> {
-        let s = self.choose.fixed;
+        let fixed = self.choose.fixed;
         let k = self.choose.k;
         let n = self.choose.n;
         match self.choose.next() {
             Some(p) => {
-                let mut j = s;
-                for i in s..=k {
-                    let start = if i == s { s } else { p[i - 1] + 1 };
+                let mut j = fixed;
+                for i in fixed..=k {
+                    let start = if i == fixed { fixed } else { p[i - 1] + 1 };
                     let end = if i == k { n } else { p[i] };
                     for v in start..end {
                         self.second_part[j] = v;

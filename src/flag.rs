@@ -11,7 +11,7 @@ use std::fmt;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
-/// Interface for object that can be used as flags.
+/// Trait for object that can be used as flags.
 pub trait Flag
 where
     Self: Canonize + Debug + Display + Serialize + DeserializeOwned,
@@ -21,8 +21,8 @@ where
     /// Returns the set of all flags of size `n`.
     ///
     /// This list can have redundancy and is a priori not reduced modulo isomorphism.
-    /// It is used for initialisation and does not need to be efficient.
-    fn all_flags(n: usize) -> Vec<Self>;
+    /// It is used for initialisation in the flag construction.
+    fn size_zero_flags() -> Vec<Self>;
     /// Return the list of flags of size `self.size() + 1` that contain `self`
     /// as an induced subflag.
     ///
@@ -51,7 +51,7 @@ where
     /// Return the list of flags of size `n` reduced modulo isomorphism.
     fn generate(n: usize) -> Vec<Self> {
         if n == 0 {
-            Self::all_flags(0)
+            Self::size_zero_flags()
         } else {
             Self::generate_next(&Self::generate(n - 1))
         }
@@ -61,7 +61,7 @@ where
     /// flag `type_flag`.
     /// Each different way to root this flag give a different flag in the result.
     fn generate_typed_up(type_flag: &Self, g_vec: &[Self]) -> Vec<Self> {
-        assert!(g_vec.len() != 0);
+        assert!(!g_vec.is_empty());
         let n = g_vec[0].size();
         let k = type_flag.size();
         assert!(k <= n);
@@ -94,7 +94,7 @@ where
     }
 
     /// Reorder self so that the `eta.len()` first vertices are the values
-    /// of `eta` in the corresonding order.
+    /// of `eta` in the corresponding order.
     fn select_type(&self, eta: &[usize]) -> Self {
         let type_selector = invert(&permutation_of_injection(self.size(), eta));
         self.apply_morphism(&type_selector)
@@ -174,7 +174,7 @@ impl<F: Flag, A> Ord for SubClass<F, A> {
     }
 }
 
-/// Mechanism for defining a subclass of a flag class.
+/// Trait for defining a class of flag as a subset of an already defined class of flag.
 pub trait SubFlag<F>
 where
     F: Flag,
@@ -184,7 +184,7 @@ where
 
     const SUBCLASS_NAME: &'static str;
 
-    const HEREDITARY: bool = true;
+    const HEREDITARY: bool = F::HEREDITARY;
 }
 
 impl<F, A> Canonize for SubClass<F, A>
@@ -225,7 +225,7 @@ where
     fn induce(&self, p: &[usize]) -> Self {
         self.content.induce(p).into()
     }
-    fn all_flags(n: usize) -> Vec<Self> {
-        F::all_flags(n).into_iter().map(Into::into).collect()
+    fn size_zero_flags() -> Vec<Self> {
+        F::size_zero_flags().into_iter().map(Into::into).collect()
     }
 }
