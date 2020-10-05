@@ -1,6 +1,6 @@
 [package]
 name = "flag-algebra"
-version = "0.1.6"
+version = "0.1.7"
 authors = ["Rémi de Verclos <r.deverclos@math.ru.nl>"]
 description = "An implementation of Razborov's flag algebras"
 publish = true
