@@ -226,6 +226,9 @@ where
         for v in &self.obj.data {
             write!(file, "{} ", v)?;
         }
+        for _ in &self.cs_subspace {
+            write!(file, "0 ")?;
+        }
         writeln!(file)?;
         writeln!(file)?;
         // Lines 5+: body
@@ -367,9 +370,6 @@ impl Subspace {
             .iter()
             .filter(move |(mode2, _)| *mode2 == mode)
             .map(|(_, mat)| mat)
-    }
-    fn codimension(&self, mode: CSMode) -> usize {
-        self.orthogonal_matrices(mode).count()
     }
 }
 
@@ -901,7 +901,7 @@ where
 {
     let mut res = Vec::with_capacity(mat.ncols());
 
-    let mut cholesky0 = mat.cholesky(UPLO::Upper).unwrap();
+    let cholesky0 = mat.cholesky(UPLO::Upper).unwrap();
     // Fixme
 
     let cholesky = match cs.0 {
