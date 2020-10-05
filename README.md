@@ -3,16 +3,16 @@
 An implementation of
 [flag algebras](http://people.cs.uchicago.edu/~razborov/files/flag.pdf).
 
-
+Flag algebras is a framework used to produce computer-assisted proofs of some inequalities in combinatorics, relying on Semidefinite programming.
 
 ## Example
 
 ```rust
+// Proving that in any graph, at least 1/4 of the triples are triangles or independent sets.
 extern crate flag_algebra;
 
 use flag_algebra::*;
-use flags::Graph;
-use operator::Basis;
+use flag_algebra::flags::Graph;
 use sdp::Problem;
 
 pub fn main() {
@@ -34,7 +34,7 @@ pub fn main() {
    };
 
    // Write the correspondind SDP program in "goodman.sdpa".
-   // This program can then be solved by CSDP.
+   // This program can then be solved by CSDP. The answer would be 0.25.
    pb.write_sdpa("goodman").unwrap();
 }
 ```
