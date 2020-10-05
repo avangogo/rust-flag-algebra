@@ -35,7 +35,9 @@ pub trait Html {
         if Self::LATEX {
             writeln!(file, "{}", MATHJAX)?;
         }
-        writeln!(file, "<style>{}</style></head><body>", CSS)
+        writeln!(file, "<style>{}</style></head><body>", CSS)?;
+        self.print_html(&mut file)?;
+        writeln!(file, "</body>")
     }
 }
 
@@ -447,4 +449,30 @@ fn write_array1<W: Write, N: Display>(w: &mut W, mat: &Array1<N>) -> Result<()> 
     }
     writeln!(w, "</mtr>")?;
     writeln!(w, "</mtable></mfenced></math>")
+}
+
+// For including quantum flags in latex reports
+pub fn latexify<F, N>(qflag: &QFlag<N, F>, folder: &str)
+    where
+    F: Flag + Draw,
+    N: Num + Clone + Display + FromPrimitive,
+{
+    let mut path = PathBuf::from(folder);
+    let scale: N = N::from_u64(qflag.scale).unwrap();  
+    for (i, (val, flag)) in qflag.data.iter().zip(qflag.basis.get().into_iter()).enumerate() {
+        if !val.is_zero() {
+            let b = qflag.basis;
+            let filename = format!("{}in{}t{}id{}", i, b.size, b.t.size, b.t.id);
+            path.push(&filename);
+            path.set_extension("svg");
+            svg::save(&path, &flag.draw_typed(qflag.basis.t.size)).unwrap();
+            let x = val.clone() / scale.clone();
+            if x.is_one() {
+                print!(" + \\flag{{{}}}", filename)
+            } else {
+                print!(" + {}\\cdot\\flag{{{}}}", val, filename)
+            };
+            assert!(path.pop());
+        }
+    }
 }

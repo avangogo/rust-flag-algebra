@@ -59,7 +59,7 @@ impl<N, F> Names<N,F>
         where F: Ord,
     {
         self.flags.entry((i, basis)).or_insert_with(
-            || format!("F_{}^{{{}}}", i, basis.print_concise())
+            || format!("F_{{{}}}^{{{}}}", i, basis.print_concise())
         ).clone()
     }
     fn name_type(&mut self, t: Type) -> String {
@@ -222,9 +222,9 @@ impl<N, F> Expr<N, F> {
 
 fn latex_basis<N, F>(basis: &Basis<F>, names: &mut Names<N,F>) -> String {
     if basis.t.is_empty() {
-        format!("\\mathcal{{F}}_{}", basis.size)
+        format!("\\mathcal{{F}}_{{{}}}", basis.size)
     } else {
-        format!("\\mathcal{{F}}^{{{}}}_{}", names.name_type(basis.t), basis.size)
+        format!("\\mathcal{{F}}^{{{}}}_{{{}}}", names.name_type(basis.t), basis.size)
     }
 }
 
@@ -502,7 +502,7 @@ mod tests {
         let result2 = result.expr.eval();
         assert_eq!(result, result2);
 
-        let t = crate::operator::Type { size: 2, id: 1 };
+        let t = Type { size: 2, id: 1 };
         let b = Basis::new(3).with_type(t);
         let flag: V = b.flag_from_id(1);
         let res = ((flag.clone() * 3) * -flag).untype();
