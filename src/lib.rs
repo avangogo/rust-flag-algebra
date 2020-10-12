@@ -61,7 +61,7 @@ pub mod draw;
 pub mod flags;
 mod iterators;
 pub mod operator;
-pub use crate::operator::{Basis, Type, Savable};
+pub use crate::operator::{Basis, Savable, Type};
 
 pub mod expr;
 mod reduction;

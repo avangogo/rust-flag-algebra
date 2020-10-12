@@ -274,7 +274,9 @@ pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error
     let time_before_stream = Duration::from_secs(2);
     while let Some(line_result) = lines.next() {
         let line = line_result.unwrap();
-        if line.starts_with("CSDP") { continue };
+        if line.starts_with("CSDP") {
+            continue;
+        };
         if line.starts_with("Iter") {
             if !stream && Instant::now() - time_start > time_before_stream {
                 stream = true;
@@ -308,7 +310,9 @@ pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error
                 return Ok(value);
             } else {
                 info!("{}", line);
-                if code > 10 { panic!("{:?} aborted with code {}", command, code) };
+                if code > 10 {
+                    panic!("{:?} aborted with code {}", command, code)
+                };
                 return Err(SdpNotSolved(code));
             }
         }

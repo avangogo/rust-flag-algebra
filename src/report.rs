@@ -1,12 +1,12 @@
 use self::ndarray_linalg::{lapack::UPLO, Eigh};
 use crate::algebra::*;
 use crate::draw::Draw;
+use crate::expr::Names;
 use crate::flag::Flag;
 use crate::operator::{Basis, Savable};
 use crate::sdp::*;
-use crate::expr::Names;
 use ndarray::ScalarOperand;
-use num::{Zero, Num, FromPrimitive};
+use num::{FromPrimitive, Num, Zero};
 
 use sprs::CsMat;
 use std::fmt::Display;
@@ -20,18 +20,15 @@ use ndarray::Array2;
 
 pub trait Html {
     fn print_html<W: Write>(&self, w: &mut W) -> Result<()>;
-    
-    const LATEX: bool = false; /// True if Mathjax need to be loaded
-    
+
+    const LATEX: bool = false;
+    /// True if Mathjax need to be loaded
+
     fn html(&self, name: &str) -> Result<()> {
         let mut filename = PathBuf::from(name);
         let _ = filename.set_extension("html");
         let mut file = BufWriter::new(File::create(&filename)?);
-        writeln!(
-            file,
-            "<!DOCTYPE html><html><head><title>{}</title>",
-            name
-        )?;
+        writeln!(file, "<!DOCTYPE html><html><head><title>{}</title>", name)?;
         if Self::LATEX {
             writeln!(file, "{}", MATHJAX)?;
         }
@@ -47,8 +44,7 @@ impl<F: Draw> Html for F {
     }
 }
 
-const CSS: &'static str =
-"
+const CSS: &'static str = "
 :root {
     --color1: #a3bbdc;
     --color2: #dae4f1;
@@ -106,8 +102,7 @@ svg.inline-flag {
 }
 ";
 
-const MATHJAX: &'static str =
-"<script>
+const MATHJAX: &'static str = "<script>
 MathJax = {
   tex: {
     inlineMath: ['\\\\[', '\\\\]', ['$','$']],
@@ -119,7 +114,7 @@ MathJax = {
      </script>";
 
 fn print_tab<W, F, G, L>(w: &mut W, tab: &[G], mut f: F, type_size: usize) -> Result<()>
-    where
+where
     W: Write,
     F: FnMut(usize, &G) -> Option<L>,
     G: Draw,
@@ -129,7 +124,11 @@ fn print_tab<W, F, G, L>(w: &mut W, tab: &[G], mut f: F, type_size: usize) -> Re
     for (i, x) in tab.iter().enumerate() {
         if let Some(label) = f(i, x) {
             writeln!(w, "<div class=\"qflag_item\">")?;
-            writeln!(w, "<span>{}</span>", x.draw_with_parameters(|_| 0, type_size).to_string())?;
+            writeln!(
+                w,
+                "<span>{}</span>",
+                x.draw_with_parameters(|_| 0, type_size).to_string()
+            )?;
             writeln!(w, "<span>{}</span></div>", label)?;
         }
     }
@@ -137,55 +136,57 @@ fn print_tab<W, F, G, L>(w: &mut W, tab: &[G], mut f: F, type_size: usize) -> Re
 }
 
 impl<G: Draw, F, L> Html for (&[G], F)
-    where
+where
     F: FnMut(&G) -> L + Clone,
     L: Display,
 {
     const LATEX: bool = G::LATEX;
-    
+
     fn print_html<W: Write>(&self, w: &mut W) -> Result<()> {
         let mut f = self.1.clone();
-        print_tab(w, self.0, |_, x|{ Some(f(x)) }, 0)?;
+        print_tab(w, self.0, |_, x| Some(f(x)), 0)?;
         Ok(())
     }
 }
 
 impl<F> Html for Basis<F>
-    where
+where
     F: Flag + Draw,
 {
     const LATEX: bool = F::LATEX;
-    
-    fn print_html<W: Write>(&self, w: &mut W) -> Result<()> {  
-        print_tab(w, &self.get(), |i, _|{ Some(i) }, self.t.size)
+
+    fn print_html<W: Write>(&self, w: &mut W) -> Result<()> {
+        print_tab(w, &self.get(), |i, _| Some(i), self.t.size)
     }
 }
 
-impl<F, N> Html for QFlag<N, F> where
+impl<F, N> Html for QFlag<N, F>
+where
     F: Flag + Draw,
     N: Num + Clone + Display + FromPrimitive,
 {
     const LATEX: bool = F::LATEX;
-    
+
     fn print_html<W: Write>(&self, w: &mut W) -> Result<()> {
         let scale: N = N::from_u64(self.scale).unwrap();
-        print_tab(w,
-                  &self.basis.get(),
-                  |i, _| {
-                      let val = self.data[i].clone();
-                      if val.is_zero() {
-                          None
-                      } else {
-                          Some(val / scale.clone())
-                      }
-                  },
-                  self.basis.t.size,
+        print_tab(
+            w,
+            &self.basis.get(),
+            |i, _| {
+                let val = self.data[i].clone();
+                if val.is_zero() {
+                    None
+                } else {
+                    Some(val / scale.clone())
+                }
+            },
+            self.basis.t.size,
         )
     }
 }
 
-fn inlined_list< 'a, I>(iter: I) -> String
-    where
+fn inlined_list<'a, I>(iter: I) -> String
+where
     I: Iterator + Clone + 'a,
     I::Item: AsRef<str>,
 {
@@ -196,7 +197,7 @@ fn inlined_list< 'a, I>(iter: I) -> String
             if i == last {
                 res += " and ";
             } else {
-                res += ", ";    
+                res += ", ";
             }
         };
         res += word.as_ref();
@@ -204,12 +205,13 @@ fn inlined_list< 'a, I>(iter: I) -> String
     res
 }
 
-impl<N, F> Html for Names<N, F> where
+impl<N, F> Html for Names<N, F>
+where
     F: Flag + Draw,
     N: Num + Clone + Display + FromPrimitive,
 {
     const LATEX: bool = F::LATEX;
-    
+
     fn print_html<W: Write>(&self, w: &mut W) -> Result<()> {
         // Inlined defintions
         let mut inline_names = Vec::new();
@@ -222,30 +224,38 @@ impl<N, F> Html for Names<N, F> where
             inline_names.push((name, svg))
         }
         if !inline_names.is_empty() {
-            let defs: Vec<_> = inline_names.into_iter().map(|(name, svg)|
-                                                            format!("${}=$ {}",
-                                     name,
-                                                                    svg.set("class", "inline-flag").to_string())
-            ).collect();
+            let defs: Vec<_> = inline_names
+                .into_iter()
+                .map(|(name, svg)| {
+                    format!(
+                        "${}=$ {}",
+                        name,
+                        svg.set("class", "inline-flag").to_string()
+                    )
+                })
+                .collect();
             writeln!(w, "<p>where {}.</p>", inlined_list(defs.iter()))?
         }
         // Long definitions
-        let other_names: Vec<_> =
-            self.sets.iter().map(|(name, _, _)| name)
+        let other_names: Vec<_> = self
+            .sets
+            .iter()
+            .map(|(name, _, _)| name)
             .chain(self.functions.iter().map(|(name, _)| name))
             .map(|s| format!("${}$", s))
             .collect();
         if !other_names.is_empty() {
-            writeln!(w,
-                     "<details><summary>See the definition of {}.</summary>",
-                     inlined_list(other_names.iter()))?;
+            writeln!(
+                w,
+                "<details><summary>See the definition of {}.</summary>",
+                inlined_list(other_names.iter())
+            )?;
             // Detailed content
             for (name, basis, flags) in &self.sets {
                 writeln!(w, "<p>${}$ contains the following flags:</p>", name)?;
                 writeln!(w, "<div class=\"flags\">")?;
                 for flag in flags.iter() {
-                    writeln!(w, "{}", flag.draw_typed(basis.t.size)
-                             .to_string())?;
+                    writeln!(w, "{}", flag.draw_typed(basis.t.size).to_string())?;
                 }
                 writeln!(w, "</div>")?;
             }
@@ -253,13 +263,12 @@ impl<N, F> Html for Names<N, F> where
                 writeln!(w, "<p>${}$ takes the following values:</p>", name)?;
                 qflag.print_html(w)?;
             }
-            
+
             writeln!(w, "</details>")?;
         }
         Ok(())
     }
 }
-
 
 pub trait Approx: Clone + Zero {
     fn is_negligible(&self) -> bool;
@@ -279,12 +288,11 @@ impl Approx for f64 {
 }
 
 fn round<N, F>(vec: &QFlag<N, F>) -> QFlag<N, F>
-    where
+where
     N: Approx + Zero + Clone,
 {
-    vec.map( N::round )
+    vec.map(N::round)
 }
-
 
 // <script type=text/x-mathjax-config> MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$']]}}); </script>
 
@@ -298,9 +306,7 @@ fn header<W: Write>(w: &mut W, title: &str) -> Result<()> {
 <style>
 {}
 </style></head><body>",
-        title,
-        MATHJAX,
-        CSS,
+        title, MATHJAX, CSS,
     )
 }
 
@@ -334,13 +340,16 @@ where
             names.print_html(&mut w)?;
         }
     }
-    writeln!(w, "<details><summary>Flag expression of the objective.</summary><div>")?;
+    writeln!(
+        w,
+        "<details><summary>Flag expression of the objective.</summary><div>"
+    )?;
     round(&pb.obj).print_html(&mut w)?;
     writeln!(w, "</div></details>")?;
     writeln!(w, "</div>")?;
 
     writeln!(w, "<h2>Inequalities</h2>")?;
-    
+
     for (block, ineqs) in pb.ineqs.iter().enumerate() {
         assert!(ineqs.len() > 0);
         writeln!(w, "<div class=\"inequality\">")?;
@@ -349,7 +358,7 @@ where
             let mut names = Names::new();
             writeln!(w, "<p>\\[{}\\]</p>", ineqs.meta().latex(&mut names))?;
             names.print_html(&mut w)?;
-        }    
+        }
         write_diag_csmatrix(&mut w, &cert.x[block])?;
         writeln!(w, "<details><summary>Contribution.</summary>")?;
         let coeff: Vec<N> = cert
@@ -453,13 +462,18 @@ fn write_array1<W: Write, N: Display>(w: &mut W, mat: &Array1<N>) -> Result<()> 
 
 // For including quantum flags in latex reports
 pub fn latexify<F, N>(qflag: &QFlag<N, F>, folder: &str)
-    where
+where
     F: Flag + Draw,
     N: Num + Clone + Display + FromPrimitive,
 {
     let mut path = PathBuf::from(folder);
-    let scale: N = N::from_u64(qflag.scale).unwrap();  
-    for (i, (val, flag)) in qflag.data.iter().zip(qflag.basis.get().into_iter()).enumerate() {
+    let scale: N = N::from_u64(qflag.scale).unwrap();
+    for (i, (val, flag)) in qflag
+        .data
+        .iter()
+        .zip(qflag.basis.get().into_iter())
+        .enumerate()
+    {
         if !val.is_zero() {
             let b = qflag.basis;
             let filename = format!("{}in{}t{}id{}", i, b.size, b.t.size, b.t.id);

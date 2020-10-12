@@ -217,7 +217,9 @@ pub fn invariant_classes<F: Flag>(eta: &[usize], type_size: usize, input_vec: &[
     assert!(!input_vec.is_empty());
     let n = input_vec[0].size();
     assert!(type_size <= n);
-    if !eta.is_empty() { unimplemented!() };
+    if !eta.is_empty() {
+        unimplemented!()
+    };
     let type_set: Vec<_> = (0..type_size).collect();
     let type_flag = input_vec[0].induce(&type_set).canonical_typed(eta.len());
     // Precompute the symmetry group of the type

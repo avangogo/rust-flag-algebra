@@ -137,7 +137,7 @@ impl<A> FlatMatrix for Sym<A> {
     #[inline]
     fn line_iter(n: usize, v: usize) -> Self::LineIter {
         debug_assert!(v <= n);
-        (0..n)
+        0..n
     }
     #[inline]
     fn halfline_iter(v: usize) -> Range<usize> {

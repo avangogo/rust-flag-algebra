@@ -6,15 +6,15 @@ extern crate num;
 extern crate sprs;
 extern crate svg;
 
-use ndarray_linalg::{lapack::UPLO, Cholesky, Eigh};
-use num::*;
-use sprs::{CsMat, TriMat};
 use crate::algebra::*;
 use crate::expr::Expr;
 use crate::flag::Flag;
 use crate::operator::*;
 use crate::sdpa::*;
 use arrayvec::ArrayVec;
+use ndarray_linalg::{lapack::UPLO, Cholesky, Eigh};
+use num::*;
+use sprs::{CsMat, TriMat};
 use std::ops::Index;
 
 use ndarray::{Array1, Array2, ScalarOperand};
@@ -280,7 +280,7 @@ where
         for (i_mat, (block_num, matrix)) in self.cs_subspace.iter().enumerate() {
             for (&v, (i, j)) in matrix.iter() {
                 if i <= j {
-                    let mat_num = mat_offset + i_mat + 1; 
+                    let mat_num = mat_offset + i_mat + 1;
                     write_coeff(&mut file, mat_num, block_num + block_offset, i, j, v)?;
                 }
             }
@@ -584,7 +584,7 @@ impl Selector {
     {
         let mut simple = ArrayVec::new();
         simple.push(Simple); //FIXME
-        //simple.push(Invariant);
+                             //simple.push(Invariant);
         (Self {
             ineqs: prob
                 .ineqs
@@ -613,7 +613,7 @@ impl Selector {
         }
         self
     }
-    pub fn cs_subspace_constraints(&self) -> impl Iterator<Item=(usize, &CsMat<f64>)> {
+    pub fn cs_subspace_constraints(&self) -> impl Iterator<Item = (usize, &CsMat<f64>)> {
         self.cs
             .iter()
             .zip(self.cs_subspace.iter())
@@ -624,7 +624,7 @@ impl Selector {
             })
             .flatten()
             .enumerate()
-            .map(|(i, iter_on_cs)| iter_on_cs.map(move |mat| (i, mat)) )
+            .map(|(i, iter_on_cs)| iter_on_cs.map(move |mat| (i, mat)))
             .flatten()
     }
     pub fn weight(&self) -> (usize, usize) {
@@ -671,7 +671,8 @@ impl Selector {
         res
     }
     pub fn restrict_cs(&self, (i, mode): Id, mat: CsMat<f64>) -> Result<Self, ()> {
-        if self.cs[i].iter().any(|&m| m == mode) { // If the id is valid
+        if self.cs[i].iter().any(|&m| m == mode) {
+            // If the id is valid
             let mut res = self.clone();
             res.cs_subspace[i].restrict(mode, mat);
             Ok(res)
@@ -935,17 +936,20 @@ where
     res
 }
 
-pub fn eigenvectors_qflags<F>(cs: &CauchySchwarzMatrix<F>, mat: &Array2<f64>)
-                              -> Vec<(f64, QFlag<f64, F>)>
-    where
+pub fn eigenvectors_qflags<F>(
+    cs: &CauchySchwarzMatrix<F>,
+    mat: &Array2<f64>,
+) -> Vec<(f64, QFlag<f64, F>)>
+where
     F: Flag,
-{ // FIXME: code duplication
+{
+    // FIXME: code duplication
     let mut res = Vec::with_capacity(mat.ncols());
-    
+
     let (eigenvalues, eigenvectors) = mat.eigh(UPLO::Lower).unwrap();
 
     let eigenvectors = eigenvectors.t().to_owned();
-    
+
     let eigenvectors = match cs.0 {
         Invariant => {
             let inv_mat = crate::density::class_matrices(&cs.1.invariant_classes().get())
@@ -965,16 +969,16 @@ pub fn eigenvectors_qflags<F>(cs: &CauchySchwarzMatrix<F>, mat: &Array2<f64>)
     for i in 0..eigenvectors.nrows() {
         let data = eigenvectors.row(i).to_owned();
         assert_eq!(data.len(), cs.1.split.left_basis().get().len());
-        res.push( (
+        res.push((
             eigenvalues[i],
             QFlag {
                 basis: cs.1.split.left_basis(),
                 data,
                 scale: 1,
                 expr: Expr::unknown("Eigenvectors".into()),
-            })
-        )
-        }
+            },
+        ))
+    }
 
     res
 }

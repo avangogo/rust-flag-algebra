@@ -132,7 +132,7 @@ impl Type {
         Self { size, id }
     }
     /// Iterate on all types of a given size
-    pub fn types_with_size<F: Flag>(size: usize) -> impl Iterator<Item=Self> {
+    pub fn types_with_size<F: Flag>(size: usize) -> impl Iterator<Item = Self> {
         let n_types = Basis::<F>::new(size).get().len();
         (0..n_types).map(move |id| Self { size, id })
     }
@@ -793,8 +793,6 @@ where
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -869,7 +867,7 @@ mod tests {
     }
     #[test]
     fn type_iterator() {
-        assert_eq!(Type::types_with_size::<Graph>(4).count(), 11); 
+        assert_eq!(Type::types_with_size::<Graph>(4).count(), 11);
     }
     //     #[test]
     //     fn unlabeling_eta() {

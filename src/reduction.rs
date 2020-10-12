@@ -63,15 +63,14 @@ where
     }
     pub fn init(&mut self) {
         self.write_sdpa(self.select.clone());
-        self.optimal_value = Some(self.run_csdp()
-                                  .expect("Cannot find initial solution"))
+        self.optimal_value = Some(self.run_csdp().expect("Cannot find initial solution"))
     }
     fn use_certificate(&mut self) {
         self.select = self
             .select
             .refine_with_certificate(&self.load_certificate(), &self.protected)
     }
-    pub fn run(&mut self, select: Selector) -> Result<(),()> {
+    pub fn run(&mut self, select: Selector) -> Result<(), ()> {
         self.write_sdpa(select.clone());
         if let Ok(v) = self.run_csdp() {
             if match self.optimal_value {
@@ -84,10 +83,9 @@ where
                 self.select = select;
                 info!("New certificate of weight {:?}", self.select.weight());
                 return Ok(());
-            }
-            else {
+            } else {
                 trace!("Selector rejected");
-                return Err(())
+                return Err(());
             }
         };
         Err(())
@@ -127,7 +125,7 @@ where
                 let mut mat = CsMat::zero((dim, dim));
                 mat.insert(i, i, 1.);
                 if let Ok(select) = self.select.restrict_cs(id, mat) {
-                    let _ = self.run(select);  
+                    let _ = self.run(select);
                 } else {
                     unreachable!()
                 }
@@ -161,7 +159,7 @@ where
         }
     }
     pub fn print_report(&self)
-        where
+    where
         F: Draw,
     {
         assert_eq!(Some(self.select.clone()), self.select_certificate_file);
@@ -169,9 +167,9 @@ where
         print_report(&self.pb.view(&self.select), &cert, "report").unwrap()
     }
     // Strategies
-    
+
     pub fn minimize_once(&mut self)
-        where
+    where
         F: Draw,
     {
         if self.optimal_value == None {
@@ -180,7 +178,7 @@ where
         self.print_report()
     }
     pub fn minimize(&mut self)
-        where
+    where
         F: Draw,
     {
         if self.optimal_value == None {
@@ -203,13 +201,13 @@ where
         self.cs_elim();
         self.thin_cs_elim();
         self.ineqs_elim();
-//        self.minimize_certificate();
+        //        self.minimize_certificate();
         self.write_sdpa(self.select.clone());
         self.run_csdp().unwrap();
         self.print_report()
     }
     pub fn minimize3(&mut self)
-        where
+    where
         F: Draw,
     {
         info!("Method 3");

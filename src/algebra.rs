@@ -1,10 +1,10 @@
 //! Manipulation of vectors and inequalities in a flag algebra.
 
-use crate::expr::{Expr, VarRange, Names};
+use crate::expr::{Expr, Names, VarRange};
 use crate::flag::Flag;
 use crate::operator::*;
 use ndarray::{Array1, ScalarOperand};
-use num::{Integer, Num, FromPrimitive};
+use num::{FromPrimitive, Integer, Num};
 use sprs::{CsMat, CsMatView, CsVec, TriMat};
 use std::fmt::*;
 use std::ops::*;
@@ -294,7 +294,8 @@ where
         assert_eq!(untype_flag.len(), untype_count.len());
         let mut data = Array1::<N>::zeros(outbasis_size);
         for (i, v) in self.data.iter().enumerate() {
-            data[untype_flag[i]] = data[untype_flag[i]].clone() + v.clone() * N::from_u32(untype_count[i]).unwrap()
+            data[untype_flag[i]] =
+                data[untype_flag[i]].clone() + v.clone() * N::from_u32(untype_count[i]).unwrap()
         }
         Self {
             basis: outbasis,
@@ -391,7 +392,7 @@ impl<N, F> QFlag<N, F> {
         self
     }
     pub fn map<G, M>(&self, g: G) -> QFlag<M, F>
-        where
+    where
         G: Fn(&N) -> M,
     {
         QFlag {
@@ -551,7 +552,7 @@ impl<N, F: Flag> IneqMeta<N, F> {
         }
     }
 
-    pub(crate) fn latex(&self, names: &mut Names<N,F>) -> String
+    pub(crate) fn latex(&self, names: &mut Names<N, F>) -> String
     where
         N: Display,
     {
@@ -626,30 +627,17 @@ where
     }
     fn untype(&self, untype_matrix: &CsMat<N>, denom: u32) -> Self
     where
-        N: Copy + FromPrimitive + Default + std::iter::Sum,
+        N: Copy + Num + Default + std::iter::Sum + AddAssign + Send + Sync + FromPrimitive,
     {
         Self {
             flag: untype_matrix * &self.flag,
             bound: self.bound.clone() * N::from_u32(denom).unwrap(),
         }
     }
-    /*
-        fn multiply(&self, table: &[CsMat<u32>], g: &Array1<N>) -> Self
-        where
-            N: Clone + Neg<Output=N> + AddAssign + ScalarOperand + FromPrimitive,
-        {
-            let flag = multiply(&self.clone().one_sided().flag, table, g);
-            Self {
-                flag,
-                bound: N::zero(),
-            }
-        }
-    */
     // From profiling: Memory allocation here could be optimized
     fn multiply_by_all(self, table: &[CsMat<N>], acc: &mut Vec<Self>)
     where
-        N: Num + Copy + std::iter::Sum + Default + Neg<Output = N>,
-        //        I: Num + Clone + ToPrimitive+ ScalarOperand,
+        N: Num + Copy + Send + Sync + std::iter::Sum + AddAssign + Default + Neg<Output = N>,
     {
         if let Some(other_size) = table.first().map(|mat| mat.cols()) {
             let one_sided = self.one_sided();
@@ -684,7 +672,7 @@ pub struct Ineq<N, F> {
 
 impl<N, F> Ineq<N, F>
 where
-    N: Num + Clone,
+    N: Clone + Num,
     F: Flag,
 {
     /// If self is "`f ≥ x`", returns "`f ≤ x`".
@@ -725,18 +713,22 @@ where
     }
     pub fn check(&self)
     where
-        N: Num + Debug + Neg<Output = N> + Clone + FromPrimitive + ScalarOperand + Display,
+        N: Debug + Neg<Output = N> + Clone + FromPrimitive + ScalarOperand + Display,
     {
         for i in 0..self.data.len() {
             let x = self.lhs(i);
             assert_eq!(x, x.expr.eval());
         }
     }
+}
+
+impl<N, F> Ineq<N, F>
+where
+    N: Num + Copy + Send + Sync + Default + FromPrimitive + AddAssign + std::iter::Sum,
+    F: Flag,
+{
     /// If self is "`f` ≥ `x`", return the projection "`〚f〛 ≥ x`".
-    pub fn untype(&self) -> Self
-    where
-        N: Copy + Default + std::iter::Sum + FromPrimitive,
-    {
+    pub fn untype(&self) -> Self {
         let unlabeling = Unlabeling::<F>::total(self.meta.basis.t);
         let size = self.meta.basis.size;
         let unlabel = Unlabel { unlabeling, size };
@@ -755,26 +747,11 @@ where
             data,
         }
     }
-    /*    /// If self is "`f` ≥ `x`", return the inequality "`f*g ≥ x.g`".
-        pub fn multiply_by_qflag(&self, g: &QFlag<N, F>) -> Self {
-            let split = SplitCount::from_input(&self.meta.basis, &g.basis);
-            let table = split.get();
-            //
-            let mut data = Vec::new();
-            for i in &self.data {
-                data.push(i.multiply(&table, &g.data));
-            }
-            Self {
-                data,
-                meta: self.meta.clone().multiply(&g.basis, g.expr.clone()),
-            }
-        }
-    */
     /// If self is "`f` ≥ `x`", return the set of inequalities "`f*g ≥ x.g`",
     /// where `g` is chosen such that `f*g` is a vector of `outbasis`.
     pub fn multiply_by_all(self, outbasis: Basis<F>) -> Self
     where
-        N: Default + std::iter::Sum + Neg<Output = N> + FromPrimitive + Copy,
+        N: Neg<Output = N>,
     {
         let b = outbasis / self.meta.basis;
         let splitcount = SplitCount::from_input(&self.meta.basis, &b);
@@ -798,7 +775,7 @@ where
     /// where `g` is chosen such that `〚f*g〛` is a vector of `outbasis`.
     pub fn multiply_and_unlabel(self, outbasis: Basis<F>) -> Self
     where
-        N: Default + std::iter::Sum + Neg<Output = N> + FromPrimitive + Copy,
+        N: Neg<Output = N>,
     {
         assert_eq!(outbasis.t, Type::empty());
         let unlabeling = Unlabeling::total(self.meta.basis.t);

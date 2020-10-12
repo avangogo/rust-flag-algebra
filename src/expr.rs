@@ -2,10 +2,10 @@
 
 extern crate num;
 
-use crate::operator::{Type, Basis, Savable};
+use crate::operator::{Basis, Savable, Type};
+use std::collections::BTreeMap;
 use std::fmt::*;
 use std::rc::Rc;
-use std::collections::BTreeMap;
 
 /// Expressions that represent a computation in flag algebras.
 pub enum Expr<N, F> {
@@ -33,14 +33,14 @@ pub enum VarRange<F> {
 pub struct Names<N, F> {
     pub flags: BTreeMap<(usize, Basis<F>), String>,
     pub types: BTreeMap<Type, String>,
-    pub functions: Vec<(String, QFlag<N,F>)>,
+    pub functions: Vec<(String, QFlag<N, F>)>,
     pub sets: Vec<(String, Basis<F>, Vec<F>)>,
 }
 
-impl<N, F> Names<N,F>
-{
+impl<N, F> Names<N, F> {
     pub fn new() -> Self
-        where F: Ord,
+    where
+        F: Ord,
     {
         Self {
             flags: BTreeMap::new(),
@@ -50,30 +50,36 @@ impl<N, F> Names<N,F>
         }
     }
     pub fn is_empty(&self) -> bool {
-        self.flags.is_empty() &&
-        self.types.is_empty() &&
-        self.functions.is_empty() &&
-        self.sets.is_empty()
+        self.flags.is_empty()
+            && self.types.is_empty()
+            && self.functions.is_empty()
+            && self.sets.is_empty()
     }
     fn name_flag(&mut self, i: usize, basis: Basis<F>) -> String
-        where F: Ord,
+    where
+        F: Ord,
     {
-        self.flags.entry((i, basis)).or_insert_with(
-            || format!("F_{{{}}}^{{{}}}", i, basis.print_concise())
-        ).clone()
+        self.flags
+            .entry((i, basis))
+            .or_insert_with(|| format!("F_{{{}}}^{{{}}}", i, basis.print_concise()))
+            .clone()
     }
     fn name_type(&mut self, t: Type) -> String {
         let i = self.types.len();
-        self.types.entry(t).or_insert_with(
-            || if i == 0 {
-                "\\sigma".to_string()
-            } else {
-                format!("\\sigma_{}", i)
-            }
-        ).clone()
+        self.types
+            .entry(t)
+            .or_insert_with(|| {
+                if i == 0 {
+                    "\\sigma".to_string()
+                } else {
+                    format!("\\sigma_{}", i)
+                }
+            })
+            .clone()
     }
     fn name_set(&mut self, f: fn(&F, usize) -> bool, basis: Basis<F>) -> String
-        where F: Flag,
+    where
+        F: Flag,
     {
         let name = format!("S_{}", self.sets.len() + 1);
         let mut set = basis.get();
@@ -82,7 +88,8 @@ impl<N, F> Names<N,F>
         name
     }
     fn name_function(&mut self, f: Rc<dyn Fn(&F, usize) -> N>, basis: Basis<F>) -> String
-        where F: Flag,
+    where
+        F: Flag,
     {
         let name = format!("f_{}", self.functions.len() + 1);
         self.functions.push((name.clone(), basis.from_coeff_rc(f)));
@@ -173,14 +180,14 @@ impl<N, F> Expr<N, F> {
             _ => false,
         }
     }
-    pub fn latex(&self, names: &mut Names<N,F>) -> String
+    pub fn latex(&self, names: &mut Names<N, F>) -> String
     where
         N: Display,
         F: Ord + Flag,
     {
         self.simplify().latex0(names)
     }
-    fn latex0(&self, names: &mut Names<N,F>) -> String
+    fn latex0(&self, names: &mut Names<N, F>) -> String
     where
         N: Display,
         F: Ord + Flag,
@@ -193,9 +200,16 @@ impl<N, F> Expr<N, F> {
                     format!("{} + {}", a.latex0(names), b.latex0(names))
                 }
             }
-            Mul(a, b) => format!("{}\\cdot {}", Paren(&a).latex(names), Paren(&b).latex(names)),
+            Mul(a, b) => format!(
+                "{}\\cdot {}",
+                Paren(&a).latex(names),
+                Paren(&b).latex(names)
+            ),
             Neg(a) => format!("-{}", Paren(&a).latex(names)),
-            Unlab(a) => format!("\\left[\\!\\!\\left[{}\\right]\\!\\!\\right]", a.latex0(names)),
+            Unlab(a) => format!(
+                "\\left[\\!\\!\\left[{}\\right]\\!\\!\\right]",
+                a.latex0(names)
+            ),
             Zero => "0".into(),
             One => "1".into(),
             Num(s) => format!("{}", s),
@@ -208,23 +222,30 @@ impl<N, F> Expr<N, F> {
                 }
             }
             Flag(i, basis) => names.name_flag(*i, *basis),
-            FromFunction(f, b) => format!("\\sum_{{F\\in{}}} {}(F)F",
-                                          latex_basis(b, names),
-                                          names.name_function(f.clone(), *b)
+            FromFunction(f, b) => format!(
+                "\\sum_{{F\\in{}}} {}(F)F",
+                latex_basis(b, names),
+                names.name_function(f.clone(), *b)
             ),
-            FromIndicator(f, b) => format!("\\sum_{{F\\in {}\\subseteq{}}}F",
-                                           names.name_set(*f, *b),
-                                           latex_basis(b, names)),
+            FromIndicator(f, b) => format!(
+                "\\sum_{{F\\in {}\\subseteq{}}}F",
+                names.name_set(*f, *b),
+                latex_basis(b, names)
+            ),
             Unknown => "Unknown".into(),
         }
     }
 }
 
-fn latex_basis<N, F>(basis: &Basis<F>, names: &mut Names<N,F>) -> String {
+fn latex_basis<N, F>(basis: &Basis<F>, names: &mut Names<N, F>) -> String {
     if basis.t.is_empty() {
         format!("\\mathcal{{F}}_{{{}}}", basis.size)
     } else {
-        format!("\\mathcal{{F}}^{{{}}}_{{{}}}", names.name_type(basis.t), basis.size)
+        format!(
+            "\\mathcal{{F}}^{{{}}}_{{{}}}",
+            names.name_type(basis.t),
+            basis.size
+        )
     }
 }
 
@@ -248,7 +269,7 @@ where
     N: Display,
     F: Ord + Flag,
 {
-    fn latex(&self, names: &mut Names<N,F>) -> String {
+    fn latex(&self, names: &mut Names<N, F>) -> String {
         if self.0.is_sum() {
             format!("\\left({}\\right)", self.0.latex0(names))
         } else {
@@ -413,29 +434,27 @@ where
     }
 }
 
-impl<N, F> Expr<N, F>
-{
-    pub fn map<Fun, M>(&self, f: &Fun) -> Expr<M, F> where
+impl<N, F> Expr<N, F> {
+    pub fn map<Fun, M>(&self, f: &Fun) -> Expr<M, F>
+    where
         Fun: Fn(&N) -> M,
     {
-        let rec = |e: &Self| {
-            Rc::new(e.map(f))
-        };
-        
+        let rec = |e: &Self| Rc::new(e.map(f));
+
         match self {
-            | Add(e1, e2) => Add(rec(e1), rec(e2)),
-            | Mul(e1, e2) => Mul(rec(e1), rec(e2)),
-            | Neg(e) => Neg(rec(e)),
-            | Unlab(e) => Unlab(rec(e)),
-            | Named(e, name, latex) => Named(rec(e), name.clone(), *latex),
-            | FromFunction(_g, b) => FromFunction(Rc::new(|_,_| unimplemented!()), *b), // Fixme
-            | FromIndicator(g, b) => FromIndicator(*g, *b),
-            | Var(i) => Var(*i),
-            | Flag(id, b) => Flag(*id, *b),
-            | Unknown => Unknown,
-            | Num(n) => Num(Rc::new(f(&*n))),
-            | Zero => Zero,
-            | One => One,
+            Add(e1, e2) => Add(rec(e1), rec(e2)),
+            Mul(e1, e2) => Mul(rec(e1), rec(e2)),
+            Neg(e) => Neg(rec(e)),
+            Unlab(e) => Unlab(rec(e)),
+            Named(e, name, latex) => Named(rec(e), name.clone(), *latex),
+            FromFunction(_g, b) => FromFunction(Rc::new(|_, _| unimplemented!()), *b), // Fixme
+            FromIndicator(g, b) => FromIndicator(*g, *b),
+            Var(i) => Var(*i),
+            Flag(id, b) => Flag(*id, *b),
+            Unknown => Unknown,
+            Num(n) => Num(Rc::new(f(&*n))),
+            Zero => Zero,
+            One => One,
         }
     }
 }
