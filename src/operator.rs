@@ -589,7 +589,12 @@ impl<F: Flag> Savable<(Vec<CsMat<i64>>, Vec<CsMat<i64>>), F> for ReducedByInvari
         let mut res_anti = Vec::with_capacity(mul_and_unlabel.len());
         for m in mul_and_unlabel.into_iter() {
             let invariant = &(&invariant_mat.transpose_view() * &m) * &invariant_mat;
-            let antiinvariant = &(&antiinvariant_mat.transpose_view() * &m) * &antiinvariant_mat;
+            let antiinvariant =
+                if antiinvariant_mat.cols() == 0 {
+                    CsMat::zero((0,0)) // avoiding a small bug of sprs
+                } else {
+                    &(&antiinvariant_mat.transpose_view() * &m) * &antiinvariant_mat
+                };
             res_inv.push(invariant);
             res_anti.push(antiinvariant);
         }
