@@ -1,12 +1,13 @@
 //!An implementation of
 //![flag algebras](http://people.cs.uchicago.edu/~razborov/files/flag.pdf).
 //!
-//! Flag algebras is a framework used to produce computer-assisted proofs of some inequalities in combinatorics, relying on Semidefinite programming.
+//! Flag algebras is a framework used to produce computer-assisted proofs of some inequalities in combinatorics, relying on Semi-Definite Programming.
 //!
 //!# Example
 //!
 //!```rust,no_run
-//! // Proving that in any graph, at least 1/4 of the triples are triangles or independent sets.
+//! // Proving that in any graph, at least 1/4 of the triples
+//! // are triangles or independent sets.
 //!extern crate flag_algebra;
 //!
 //!use flag_algebra::*;
