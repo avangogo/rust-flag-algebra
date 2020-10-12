@@ -26,13 +26,13 @@ impl<'a> Iterator for EdgeIterator<'a> {
     type Item = (usize, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.u + 1 == self.v {
+        self.u += 1;
+        if self.u >= self.v  {
             self.u = 0;
             self.v += 1;
-        } else {
-            self.u += 1;
         }
-        if self.u >= self.g.size {
+        assert!(self.u < self.v);
+        if self.v >= self.g.size {
             None
         } else if self.g.edge(self.u, self.v) {
             Some((self.u, self.v))
@@ -239,5 +239,14 @@ mod tests {
         let g = Graph::new(5, &[(0, 1), (1, 2), (2, 3), (3, 4), (4, 0)]);
         let h = Graph::new(5, &[(3, 2), (1, 2), (3, 4), (0, 4), (1, 0)]);
         assert_eq!(g, h);
+    }
+    #[test]
+    fn edge_iterator() {
+        let g = Graph::new(5, &[(0, 1), (1, 2), (0, 4), (2, 3), (3, 4)]);
+        assert_eq!(g.edges().count(), 5);
+        let k3 = Graph::new(5, &[(0, 1), (1, 2), (2, 3)]);
+        assert_eq!(k3.edges().count(), 3);
+        let e6 = Graph::new(6, &[]);
+        assert_eq!(e6.edges().count(), 0);
     }
 }
