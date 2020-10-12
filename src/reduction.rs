@@ -4,17 +4,19 @@ use crate::report::*;
 use crate::sdp::*;
 use log::*;
 use sprs::CsMat;
-use std::result;
 
-// FlagSolver : A higher order object to try several selectors on a problem
+/// A higher level object to try several selectors on a problem
 #[derive(Debug, Clone)]
 pub struct FlagSolver<F> {
     pb: Problem<f64, F>,
     name: String,
-    optimal_value: Option<f64>,
-    select: Selector, // If there is an optimal value, this correspond to a selector giving it
-    select_sdpa_file: Option<Selector>, // The selector corresponding to the file name.spda
-    select_certificate_file: Option<Selector>, // Selector corresponding to the file certificate
+    pub optimal_value: Option<f64>,
+    /// If there is an optimal value, this correspond to a selector giving it
+    select: Selector,
+    /// The selector corresponding to the file name.spda
+    select_sdpa_file: Option<Selector>,
+    /// Selector corresponding to the file certificate
+    select_certificate_file: Option<Selector>,
     protected: Vec<bool>,
 }
 
@@ -46,7 +48,7 @@ where
             .expect("Cannot write sdpa file");
         self.select_sdpa_file = Some(select);
     }
-    fn run_csdp(&mut self) -> result::Result<f64, ()> {
+    fn run_csdp(&mut self) -> Result<f64, ()> {
         match self.select_sdpa_file.take() {
             Some(select) => {
                 self.select_certificate_file = Some(select);
@@ -69,7 +71,7 @@ where
             .select
             .refine_with_certificate(&self.load_certificate(), &self.protected)
     }
-    pub fn run(&mut self, select: Selector) -> result::Result<(),()> {
+    pub fn run(&mut self, select: Selector) -> Result<(),()> {
         self.write_sdpa(select.clone());
         if let Ok(v) = self.run_csdp() {
             if match self.optimal_value {
@@ -77,7 +79,7 @@ where
                     self.optimal_value = Some(v);
                     true
                 }
-                Some(v0) => (v - v0).abs() < 1e-8,
+                Some(v0) => (v - v0).abs() < 1e-6,
             } {
                 self.select = select;
                 info!("New certificate of weight {:?}", self.select.weight());
@@ -108,7 +110,7 @@ where
     }
     /// Try to remove each cauchy_schwarz to see if they are useful
     pub fn cs_elim(&mut self) {
-        info!("Try to remove Caucy-Schwarz");
+        info!("Try to remove Cauchy-Schwarz");
         for &i in self.select.cs_vec().iter().rev() {
             if let Ok(select) = self.select.remove_cs(i) {
                 let _ = self.run(select);
@@ -118,6 +120,7 @@ where
         }
     }
     pub fn thin_cs_elim(&mut self) {
+        info!("Try to refine Cauchy-Schwarz");
         for &id in self.select.cs_vec().iter() {
             let dim = self.select.cs_dim(id);
             for i in 0..dim {
@@ -132,6 +135,7 @@ where
         }
     }
     pub fn ineqs_elim(&mut self) {
+        info!("Try to remove inequalities");
         for i in 0..self.select.ineqs.len() {
             if !self.protected[i] {
                 let mut select = self.select.clone();
@@ -141,6 +145,7 @@ where
         }
     }
     pub fn thin_ineqs_elim(&mut self) {
+        info!("Try to refine inequalities");
         for i in (0..self.select.ineqs.len()).rev() {
             if !self.protected[i] {
                 for j in 0..self.pb.ineqs[i].data.len() {
@@ -196,6 +201,8 @@ where
             self.init()
         };
         self.cs_elim();
+        self.thin_cs_elim();
+        self.ineqs_elim();
 //        self.minimize_certificate();
         self.write_sdpa(self.select.clone());
         self.run_csdp().unwrap();
@@ -210,11 +217,14 @@ where
             self.init()
         };
         self.cs_elim();
+        //self.thin_cs_elim();
+        //self.minimize_certificate();
+        self.ineqs_elim();
         self.thin_cs_elim();
-//        self.minimize_certificate();
-//        self.ineqs_elim();
+        self.thin_ineqs_elim();
         self.write_sdpa(self.select.clone());
         self.run_csdp().unwrap();
+        println!("{:?}", self.optimal_value);
         self.print_report()
     }
 }

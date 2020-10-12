@@ -12,7 +12,7 @@ use std::fmt;
 use std::fmt::Debug;
 use typenum::Unsigned;
 
-/// An undirected graph.
+/// Edge-colored graphs.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Serialize, Deserialize)]
 pub struct CGraph<E> {
     pub size: usize,
@@ -25,7 +25,8 @@ impl<E> CGraph<E> {
     pub fn is_edge(&self, u: usize, v: usize) -> bool {
         u != v && self.edge[(u, v)] > 0
     }
-
+    /// Return the color of an edge `uv`.
+    /// Returns `0` if there is no edge.
     pub fn edge(&self, u: usize, v: usize) -> u8 {
         self.edge[(u, v)]
     }
@@ -40,7 +41,8 @@ impl<E> CGraph<E> {
         }
         res
     }
-
+    /// Create a new colored graph with the specified edges.
+    /// Edges not listed get value 0.
     pub fn new(n: usize, edge: &[((usize, usize), u8)]) -> Self
     where
         E: Unsigned,
@@ -56,7 +58,6 @@ impl<E> CGraph<E> {
         }
         res
     }
-
     /// Create the graph on `n` vertices with no edge.  
     pub fn empty(n: usize) -> Self {
         Self {

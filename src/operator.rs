@@ -131,6 +131,11 @@ impl Type {
             .expect("Flag not found");
         Self { size, id }
     }
+    /// Iterate on all types of a given size
+    pub fn types_with_size<F: Flag>(size: usize) -> impl Iterator<Item=Self> {
+        let n_types = Basis::<F>::new(size).get().len();
+        (0..n_types).map(move |id| Self { size, id })
+    }
     /// Print the basis information in a short way
     pub fn print_concise(&self) -> String {
         if self.is_empty() {
@@ -319,7 +324,8 @@ pub struct SubflagCount<F> {
 
 impl<F: Flag> SubflagCount<F> {
     pub fn make(k: usize, n: usize, type_: Type) -> Self {
-        assert!(type_.size <= k && k <= n);
+        assert!(type_.size <= k);
+        assert!(k <= n);
         Self {
             k,
             n,
@@ -860,6 +866,10 @@ mod tests {
         let unlabeling = Unlabeling::<Graph>::total(t);
         let split = SplitCount::make(3, 2, t);
         let _mau = (MulAndUnlabel { split, unlabeling }).get();
+    }
+    #[test]
+    fn type_iterator() {
+        assert_eq!(Type::types_with_size::<Graph>(4).count(), 11); 
     }
     //     #[test]
     //     fn unlabeling_eta() {
