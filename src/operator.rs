@@ -734,7 +734,7 @@ where
     where
         N: Num + Clone,
     {
-        assert!(F::HEREDITARY);
+        assert!(F::HEREDITARY || self.size == self.t.size);
         let n = self.get().len();
         QFlag {
             basis: self,
