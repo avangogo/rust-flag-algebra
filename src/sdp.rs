@@ -99,6 +99,16 @@ where
 }
 
 impl<N, F: Flag> Problem<N, F> {
+    /// Create a minimization problem with the argument as objective function.
+    pub fn minimize(obj: QFlag<N, F>) -> Self
+        where N: Display + Num + FromPrimitive + Clone + Neg<Output = N>,
+    {
+        Self {
+            ineqs: vec![flags_are_nonnegative(obj.basis), total_sum_is_one(obj.basis)],
+            cs: obj.basis.all_cs(),
+            obj,
+        }
+    }
     /// Panic if the size of the basis involved are inconsistent.
     pub fn check(&self) {
         let b = self.obj.basis;

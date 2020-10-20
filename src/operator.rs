@@ -92,24 +92,26 @@ where
 
 /// Type (or root) of a flag.
 /// It is identified by its size and its id in the list of flags of that size.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
-pub struct Type {
+#[derive(Debug, Hash)]
+pub struct Type<F> {
     /// Size of the type.
     pub size: usize,
     /// Index of the type in the list of unlabeled flags of this size.
     pub id: usize,
+    /// Retains the kind of flag (graph, ...)
+    phantom: PhantomData<F>,
 }
 
-impl Type {
+impl<F> Type<F> {
     /// Constructor for the type.
     pub fn new(size: usize, id: usize) -> Self {
-        Self { size, id }
+        Self { size, id, phantom: PhantomData,}
     }
     /// Create a type of size 0.
     pub fn empty() -> Self {
         Self::new(0, 0)
     }
-    /// Return wether the input has size zero
+    /// Return wether the input has size zero.
     pub fn is_empty(&self) -> bool {
         self == &Self::empty()
     }
@@ -122,21 +124,27 @@ impl Type {
         }
     }
     /// Create the type corresponding to g
-    pub fn from_flag<F: Flag>(g: &F) -> Self {
-        let size = g.size();
-        let reduced_g = g.canonical();
+    pub fn from_flag<G>(g: &G) -> Self
+        where F: Flag,
+              G: Into<F> + Clone,
+    {
+        let f: F = g.clone().into();
+        let size = f.size();
+        let reduced_f = f.canonical();
         let id = Basis::new(size)
             .get()
-            .binary_search(&reduced_g)
+            .binary_search(&reduced_f)
             .expect("Flag not found");
-        Self { size, id }
+        Self::new(size, id)
     }
-    /// Iterate on all types of a given size
-    pub fn types_with_size<F: Flag>(size: usize) -> impl Iterator<Item = Self> {
+    /// Iterate on all types of a given size.
+    pub fn types_with_size(size: usize) -> impl Iterator<Item = Self>
+        where F: Flag,
+    {
         let n_types = Basis::<F>::new(size).get().len();
-        (0..n_types).map(move |id| Self { size, id })
+        (0..n_types).map(move |id| Self::new(size, id))
     }
-    /// Print the basis information in a short way
+    /// Print the type identifier in a short way.
     pub fn print_concise(&self) -> String {
         if self.is_empty() {
             String::new()
@@ -148,42 +156,68 @@ impl Type {
 
 //============ Basis ===========
 
-/// The set of flags of size size and type t
-/// .get() returns an ordered vector containing all corresponding flags
+/// Identifier for the set of flags with given size and type
+/// (in the sense of a labeled subgraph).
+///
+/// The kind of flag is determined by the associated Rust datatype.
+/// For instance `Basis<Graph>` is the Rust type for a basis of graphs.
+///
+/// `basis.get()` returns an ordered vector containing all corresponding flags.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub struct Basis<F> {
-    /// Number of vertices of the flags of the basis.
+    /// Number of vertices in the flags of the basis.
     pub size: usize,
     /// Type of the flags of the basis.
-    pub t: Type,
-    phantom: PhantomData<F>,
+    pub t: Type<F>,
 }
 
+/// # Defining a Basis
 impl<F> Basis<F> {
     /// Constructor for a basis.
-    pub fn make(size: usize, t: Type) -> Self {
+    fn make(size: usize, t: Type<F>) -> Self {
         assert!(t.size <= size);
         Self {
             size,
             t,
-            phantom: PhantomData,
         }
     }
     /// Basis of flag with `size` vertices and without type.
+    ///```
+    /// use flag_algebra::*;
+    /// use flag_algebra::flags::Graph;
+    ///
+    /// // Set of graphs of size 3
+    /// // (the kind of flag -Graph- is deduced by type inference)
+    /// let basis = Basis::new(3);
+    /// let size_3_graphs: Vec<Graph> = basis.get();
+    /// assert_eq!(size_3_graphs.len(), 4);
+    ///
+    /// // With explicit type annotation
+    /// let same_basis: Basis<Graph> = Basis::new(3);
+    ///```
     pub fn new(size: usize) -> Self {
         Self::make(size, Type::empty())
     }
-    /// Basis of flag with `size` vertices and same type as `self`.
-    pub fn with_size(&self, size: usize) -> Self {
-        Self::make(size, self.t)
-    }
     /// Basis of flag with same size as `self` and type `t`.
-    pub fn with_type(&self, t: Type) -> Self {
+    ///```
+    /// use flag_algebra::*;
+    /// use flag_algebra::flags::Graph;
+    ///
+    /// // Basis of graphs of size 4 rooted on an edge
+    /// let edge = Graph::new(2, &[(0, 1)]);
+    /// let t = Type::from_flag(&edge);
+    /// let basis: Basis<Graph> = Basis::new(4).with_type(t);
+    ///```
+    pub fn with_type(&self, t: Type<F>) -> Self {
         Self::make(self.size, t)
     }
     /// Basis of flag with same size as `self` without type `t`.
     pub fn without_type(&self) -> Self {
         self.with_type(Type::empty())
+    }
+    /// Basis of flag with `size` vertices and same type as `self`.
+    pub fn with_size(&self, size: usize) -> Self {
+        Self::make(size, self.t)
     }
     /// Print the basis information in a short way.
     pub fn print_concise(&self) -> String {
@@ -195,12 +229,22 @@ impl<F> Basis<F> {
     }
 }
 
+impl<F> Display for Type<F> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        if *self == Type::empty() {
+            write!(f, "Empty type")
+        } else {
+            write!(f, "Type of size {} (id {})", self.size, self.id)
+        }
+    }
+}
+
 impl<F> Display for Basis<F> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         if self.t == Type::empty() {
             write!(f, "Flags of size {} without type", self.size)
         } else {
-            write!(f, "Flags of size {} with type {:?})", self.size, self.t)
+            write!(f, "Flags of size {} with type {})", self.size, self.t)
         }
     }
 }
@@ -252,19 +296,17 @@ impl<F: Flag> Savable<Vec<F>, F> for Basis<F> {
 pub struct SplitCount<F> {
     left_size: usize,
     right_size: usize,
-    type_: Type,
-    phantom: PhantomData<F>,
+    type_: Type<F>,
 }
 
 impl<F: Flag> SplitCount<F> {
-    pub fn make(left_size: usize, right_size: usize, type_: Type) -> Self {
+    pub fn make(left_size: usize, right_size: usize, type_: Type<F>) -> Self {
         assert!(type_.size <= left_size);
         assert!(type_.size <= right_size);
         Self {
             left_size,
             right_size,
             type_,
-            phantom: PhantomData,
         }
     }
 
@@ -318,19 +360,17 @@ impl<F: Flag> Savable<Vec<CsMat<u32>>, F> for SplitCount<F> {
 pub struct SubflagCount<F> {
     k: usize,
     n: usize,
-    type_: Type,
-    phantom: PhantomData<F>,
+    type_: Type<F>,
 }
 
 impl<F: Flag> SubflagCount<F> {
-    pub fn make(k: usize, n: usize, type_: Type) -> Self {
+    pub fn make(k: usize, n: usize, type_: Type<F>) -> Self {
         assert!(type_.size <= k);
         assert!(k <= n);
         Self {
             k,
             n,
             type_,
-            phantom: PhantomData,
         }
     }
 
@@ -384,11 +424,11 @@ impl<F> Unlabeling<F> {
     pub fn new(basis: Basis<F>, flag: usize) -> Self {
         Self { basis, flag }
     }
-    pub fn total(t: Type) -> Self {
+    pub fn total(t: Type<F>) -> Self {
         Self::new(Basis::new(t.size), t.id)
     }
 
-    pub fn input_type(&self) -> Type
+    pub fn input_type(&self) -> Type<F>
     where
         F: Flag,
     {
@@ -403,7 +443,7 @@ impl<F> Unlabeling<F> {
         }
     }
 
-    pub fn output_type(&self) -> Type {
+    pub fn output_type(&self) -> Type<F> {
         self.basis.t
     }
     /// Return the eta function of Razborov corresponding to
@@ -492,7 +532,7 @@ impl<F> Display for MulAndUnlabel<F> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(
             f,
-            "Mul. and unlabel: {}x{}; {:?} -> {:?} (id {})",
+            "Mul. and unlabel: {}x{}; {} -> {} (id {})",
             self.split.left_size,
             self.split.right_size,
             self.split.type_,
@@ -603,14 +643,22 @@ impl<F: Flag> Savable<(Vec<CsMat<i64>>, Vec<CsMat<i64>>), F> for ReducedByInvari
 }
 
 // Workaround to give Basis and Unlabeling the Clone and Copy traits
-// (derive(Clone) cannot derive the right bounf when working
+// (derive(Clone) does not derive the right bound when working
 // with PhantomData)
+impl<F> Clone for Type<F> {
+    fn clone(&self) -> Self {
+        Self {
+            size: self.size,
+            id: self.id,
+            phantom: PhantomData,
+        }
+    }
+}
 impl<F> Clone for Basis<F> {
     fn clone(&self) -> Self {
         Self {
             size: self.size,
             t: self.t,
-            phantom: PhantomData,
         }
     }
 }
@@ -628,7 +676,6 @@ impl<F> Clone for SplitCount<F> {
             left_size: self.left_size,
             right_size: self.right_size,
             type_: self.type_,
-            phantom: PhantomData,
         }
     }
 }
@@ -641,28 +688,48 @@ impl<F> Clone for MulAndUnlabel<F> {
     }
 }
 
+impl<F> Ord for Type<F> {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        (self.size, self.id).cmp(&(other.size, other.id))
+    }
+}
+
+impl<F> PartialOrd for Type<F> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<F> PartialEq for Type<F> {
+    fn eq(&self, other: &Self) -> bool {
+        self.size == other.size && self.id == other.id
+    }
+}
+
+impl<F> Copy for Type<F> {}
 impl<F> Copy for Unlabeling<F> {}
 impl<F> Copy for Basis<F> {}
 impl<F> Copy for SplitCount<F> {}
 impl<F> Copy for MulAndUnlabel<F> {}
+impl<F> Eq for Type<F> {}
 // =======================
-///Constructing quantum graphs on a basis
+
+/// # Defining a quantum flags from a specified basis.
 impl<F> Basis<F>
 where
     F: Flag,
 {
-    pub fn zero<N>(self) -> QFlag<N, F>
-    where
-        N: Num + Clone,
-    {
-        QFlag {
-            basis: self,
-            data: Array::zeros(self.get().len()),
-            scale: 1,
-            expr: Expr::Zero,
-        }
-    }
-
+    /// Sum of all flags of the basis.
+    /// This is an expression of the 1 of the flag algebra.
+    /// ```
+    /// use flag_algebra::*;
+    /// use flag_algebra::flags::Graph;
+    ///
+    /// let b = Basis::new(2);
+    /// let one = b.one();
+    /// let other: QFlag<i64, Graph> = b.random();
+    /// assert_eq!(&one * &other, other.expand(Basis::new(4)));
+    /// ```
     pub fn one<N>(self) -> QFlag<N, F>
     where
         N: Num + Clone,
@@ -676,63 +743,27 @@ where
             expr: Expr::FromIndicator(|_, _| true, self),
         }
     }
-
-    pub fn random<N>(self) -> QFlag<N, F>
+    /// The zero vector in the specified basis.
+    /// ```
+    /// use flag_algebra::*;
+    /// use flag_algebra::flags::Graph;
+    ///
+    /// let basis = Basis::new(3);
+    /// let x: QFlag<i64, Graph> = basis.random();
+    /// assert_eq!(basis.zero() + &x, x);
+    /// ```
+    pub fn zero<N>(self) -> QFlag<N, F>
     where
-        N: From<i16>,
+        N: Num + Clone,
     {
-        let data: Vec<_> = (0..self.get().len())
-            .map(|_| {
-                let x: i16 = rand::random();
-                N::from(x)
-            })
-            .collect();
         QFlag {
             basis: self,
-            data: Array::from(data),
+            data: Array::zeros(self.get().len()),
             scale: 1,
-            expr: Expr::unknown(format!("random({})", self.print_concise())),
+            expr: Expr::Zero,
         }
     }
-
-    pub fn flag_from_id<N>(self, id: usize) -> QFlag<N, F>
-    where
-        N: Num + Clone,
-    {
-        self.flag_from_id_with_base_size(id, self.get().len())
-    }
-    pub fn flag_from_id_with_base_size<N>(self, id: usize, size: usize) -> QFlag<N, F>
-    where
-        N: Num + Clone,
-    {
-        let mut res = QFlag {
-            basis: self,
-            data: Array::zeros(size),
-            scale: 1,
-            expr: Expr::Flag(id, self.clone()),
-        };
-        res.data[id] = N::one();
-        res
-    }
-
-    pub fn flag<N>(self, f: &F) -> QFlag<N, F>
-    where
-        N: Num + Clone,
-    {
-        assert_eq!(self.size, f.size());
-        let flags = self.get();
-        let mut data = Array::zeros(flags.len());
-        let f1 = f.canonical_typed(self.t.size);
-        let id = flags.binary_search(&f1).expect("Flag not found in basis");
-        data[id] = N::one();
-        QFlag {
-            basis: self,
-            data,
-            scale: 1,
-            expr: Expr::Flag(id, self.clone()),
-        }
-    }
-    pub fn from_vec<N>(self, vec: Vec<N>) -> QFlag<N, F> {
+    pub(crate) fn from_vec<N>(self, vec: Vec<N>) -> QFlag<N, F> {
         assert_eq!(self.get().len(), vec.len());
         QFlag {
             basis: self,
@@ -741,23 +772,29 @@ where
             expr: Expr::unknown(format!("from_vec({})", self.print_concise())),
         }
     }
-    pub fn from_coeff<N, M, P>(&self, f: P) -> QFlag<N, F>
-    where
-        P: Fn(&F, usize) -> M + 'static,
-        M: Into<N>,
-    {
-        let rc_f: Rc<dyn Fn(&F, usize) -> N> = Rc::new(move |a, b| f(a, b).into());
-        self.from_coeff_rc(rc_f)
-    }
-    pub(crate) fn from_coeff_rc<N>(&self, f: Rc<dyn Fn(&F, usize) -> N>) -> QFlag<N, F> {
-        let vec: Vec<_> = self.get().iter().map(|g| f(g, self.t.size)).collect();
-        QFlag {
-            basis: *self,
-            data: Array::from(vec),
-            scale: 1,
-            expr: Expr::FromFunction(f, *self),
-        }
-    }
+    /// Return the formal sum of the flags of the basis `self`
+    /// that satisfies some predicate `f`.
+    ///
+    /// The predicate `f` takes two arguments `g` and `sigma`, where `g` is a reference to
+    /// the flag and `sigma` is the size of the labeled part.
+    /// ```
+    /// use flag_algebra::*;
+    /// use flag_algebra::flags::Graph;
+    ///
+    /// // Sum of graphs of size 3 with an even number of edges
+    /// let b = Basis::<Graph>::new(3); 
+    /// let sum = b.from_indicator(|g, _| g.edges().count() % 2 == 0 );
+    ///
+    /// let e3: QFlag<f64, Graph> = flag(&Graph::new(3, &[]));
+    /// let p3 = flag(&Graph::new(3, &[(0, 1), (1, 2)]));
+    /// assert_eq!(sum, e3 + &p3);
+    ///
+    /// /// Sum of the graphs of size 3 rooted on one vertex v
+    /// /// where v has degree at least 1
+    /// let t = Type::from_flag(&Graph::new(1, &[])); // Type for one vertex
+    /// let basis = Basis::new(3).with_type(t);
+    /// let sum: QFlag<f64, Graph> = basis.from_indicator(|g, _| g.edge(0, 1) || g.edge(0, 2) );
+    /// ```
     pub fn from_indicator<N>(&self, f: fn(&F, usize) -> bool) -> QFlag<N, F>
     where
         N: One + Zero,
@@ -780,6 +817,90 @@ where
             expr: Expr::FromIndicator(f, *self),
         }
     }
+    /// Return the formal sum of `f(g)*g` on the flags `g` of the basis `self`.
+    /// The second parameter of `f` is the size of the type of `g`.
+    /// ```
+    /// use flag_algebra::*;
+    /// use flag_algebra::flags::Graph;
+    ///
+    /// // Sum of graphs of size 3 weighted by their number of edges
+    /// let b = Basis::<Graph>::new(3); 
+    /// let sum: QFlag<f64, Graph>  = b.from_coeff(|g, _| g.edges().count() as f64 );
+    /// ```
+
+    pub fn from_coeff<N, M, P>(&self, f: P) -> QFlag<N, F>
+    where
+        P: Fn(&F, usize) -> M + 'static,
+        M: Into<N>,
+    {
+        let rc_f: Rc<dyn Fn(&F, usize) -> N> = Rc::new(move |a, b| f(a, b).into());
+        self.from_coeff_rc(rc_f)
+    }
+    pub(crate) fn from_coeff_rc<N>(&self, f: Rc<dyn Fn(&F, usize) -> N>) -> QFlag<N, F> {
+        let vec: Vec<_> = self.get().iter().map(|g| f(g, self.t.size)).collect();
+        QFlag {
+            basis: *self,
+            data: Array::from(vec),
+            scale: 1,
+            expr: Expr::FromFunction(f, *self),
+        }
+    }
+        pub fn random<N>(self) -> QFlag<N, F>
+    where
+        N: From<i16>,
+    {
+        let data: Vec<_> = (0..self.get().len())
+            .map(|_| {
+                let x: i16 = rand::random();
+                N::from(x)
+            })
+            .collect();
+        QFlag {
+            basis: self,
+            data: Array::from(data),
+            scale: 1,
+            expr: Expr::unknown(format!("random({})", self.print_concise())),
+        }
+    }
+    pub(crate) fn flag_from_id<N>(self, id: usize) -> QFlag<N, F>
+    where
+        N: Num + Clone,
+    {
+        self.flag_from_id_with_base_size(id, self.get().len())
+    }
+    pub(crate) fn flag_from_id_with_base_size<N>(self, id: usize, size: usize) -> QFlag<N, F>
+    where
+        N: Num + Clone,
+    {
+        let mut res = QFlag {
+            basis: self,
+            data: Array::zeros(size),
+            scale: 1,
+            expr: Expr::Flag(id, self.clone()),
+        };
+        res.data[id] = N::one();
+        res
+    }
+    /// Create a quantum flag containing exactly one flag.
+    pub fn flag<N>(self, f: &F) -> QFlag<N, F>
+    where
+        N: Num + Clone,
+    {
+        assert_eq!(self.size, f.size());
+        let flags = self.get();
+        let mut data = Array::zeros(flags.len());
+        let f1 = f.canonical_typed(self.t.size);
+        let id = flags.binary_search(&f1).expect("Flag not found in basis");
+        data[id] = N::one();
+        QFlag {
+            basis: self,
+            data,
+            scale: 1,
+            expr: Expr::Flag(id, self.clone()),
+        }
+    }
+    /// Returns the list of identifiers of all Square-and-unlabel operators
+    /// that can be used in Cauchy-Schwarz inequalities for a problem on the basis `self`.
     pub fn all_cs(&self) -> Vec<MulAndUnlabel<F>> {
         let mut res = Vec::new();
         let n = self.size;
@@ -853,26 +974,26 @@ mod tests {
     }
     #[test]
     fn unlabel() {
-        let t = Type { size: 3, id: 1 };
+        let t = Type::new(3, 1);
         let unlabeling = Unlabeling::<Graph>::total(t);
         let size = 5;
         assert_eq!((Unlabel { unlabeling, size }).denom(), 60);
         let _ = (Unlabel { unlabeling, size }).get();
         //
-        let b = Basis::new(3).with_type(Type { size: 2, id: 1 });
+        let b = Basis::new(3).with_type(Type::new(2, 1));
         let unlabeling = Unlabeling::<Graph>::new(b, 0);
         let _ = (Unlabel { unlabeling, size }).get();
     }
     #[test]
     fn mulandunlabeling() {
-        let t = Type { size: 2, id: 1 };
+        let t = Type::new(2, 1);
         let unlabeling = Unlabeling::<Graph>::total(t);
         let split = SplitCount::make(3, 2, t);
         let _mau = (MulAndUnlabel { split, unlabeling }).get();
     }
     #[test]
     fn type_iterator() {
-        assert_eq!(Type::types_with_size::<Graph>(4).count(), 11);
+        assert_eq!(Type::<Graph>::types_with_size(4).count(), 11);
     }
     //     #[test]
     //     fn unlabeling_eta() {

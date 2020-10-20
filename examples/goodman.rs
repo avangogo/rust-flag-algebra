@@ -14,7 +14,7 @@ pub fn main() {
     let e3 = flag(&Graph::new(3, &[])); // Independent set of size 3
 
     // Definition of the optimization problem.
-    let pb = Problem::<i64, _> {
+    let pb = Problem::<f64, _> {
         // Constraints
         ineqs: vec![total_sum_is_one(basis), flags_are_nonnegative(basis)],
         // Use all relevant Cauchy-Schwarz inequalities.
@@ -22,8 +22,13 @@ pub fn main() {
         // Minimize density of triangle plus density of independent of size 3.
         obj: k3 + e3,
     };
-
+    
     // Write the correspondind SDP program in "goodman.sdpa".
     // This program can then be solved by CSDP.
     pb.write_sdpa("goodman").unwrap();
+
+    init_default_log();
+    let mut f = FlagSolver::new(pb, "goodman").protect(0);
+    f.minimize3();
+    f.print_report();
 }

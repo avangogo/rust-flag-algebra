@@ -4,7 +4,7 @@ use crate::expr::{Expr, Names, VarRange};
 use crate::flag::Flag;
 use crate::operator::*;
 use ndarray::{Array1, ScalarOperand};
-use num::{FromPrimitive, Integer, Num};
+use num::{FromPrimitive, Integer, Num, pow::Pow};
 use sprs::{CsMat, CsMatView, CsVec, TriMat};
 use std::fmt::*;
 use std::ops::*;
@@ -170,6 +170,28 @@ where
             basis: self.basis,
             data: self.data * rhs,
             scale: self.scale,
+        }
+    }
+}
+
+impl<N, F> Pow<usize> for &QFlag<N, F>
+where
+    N: Num + Clone + FromPrimitive + Display,
+    F: Flag,
+{
+    type Output = QFlag<N, F>;
+    
+    fn pow(self, n: usize) -> QFlag<N, F> {
+        match n {
+            0 => self.basis.with_size(self.basis.t.size).one(),
+            1 => self.clone(),
+            n => {
+                let mut res = self * self;
+                for _ in 2..n {
+                    res = &res * self
+                }
+                res
+            }
         }
     }
 }
@@ -852,4 +874,14 @@ mod tests {
         };
         assert_eq!(qflag.clone().no_scale(), qflag)
     }
+    #[test]
+    fn test_qflag_pows() {
+        let b = Basis::new(2).with_type(Type::new(1, 0));
+        let v: QFlag<i128, Graph> = b.random();
+        assert_eq!(v.pow(0), b.with_size(1).one());
+        assert_eq!(v.pow(1), v);
+        assert_eq!(v.pow(2), &v * &v);
+        assert_eq!(v.pow(3), &v * &(&v * &v));
+    }
+
 }

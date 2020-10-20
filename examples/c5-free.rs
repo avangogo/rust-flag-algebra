@@ -38,6 +38,6 @@ pub fn main() {
         cs: b.all_cs(),
         obj: edge.expand(b),
     };
-
+    
     pb.write_sdpa("c5-free").unwrap();
 }

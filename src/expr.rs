@@ -32,7 +32,7 @@ pub enum VarRange<F> {
 #[derive(Debug, Clone)]
 pub struct Names<N, F> {
     pub flags: BTreeMap<(usize, Basis<F>), String>,
-    pub types: BTreeMap<Type, String>,
+    pub types: BTreeMap<Type<F>, String>,
     pub functions: Vec<(String, QFlag<N, F>)>,
     pub sets: Vec<(String, Basis<F>, Vec<F>)>,
 }
@@ -64,7 +64,7 @@ impl<N, F> Names<N, F> {
             .or_insert_with(|| format!("F_{{{}}}^{{{}}}", i, basis.print_concise()))
             .clone()
     }
-    fn name_type(&mut self, t: Type) -> String {
+    fn name_type(&mut self, t: Type<F>) -> String {
         let i = self.types.len();
         self.types
             .entry(t)
@@ -521,7 +521,7 @@ mod tests {
         let result2 = result.expr.eval();
         assert_eq!(result, result2);
 
-        let t = Type { size: 2, id: 1 };
+        let t = Type::new(2, 1);
         let b = Basis::new(3).with_type(t);
         let flag: V = b.flag_from_id(1);
         let res = ((flag.clone() * 3) * -flag).untype();

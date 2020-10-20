@@ -6,6 +6,8 @@ use operator::Basis;
 use sdp::Problem;
 
 pub fn main() {
+    init_default_log();
+    
     // Work on the graphs of size 3.
     let basis = Basis::new(3);
 
