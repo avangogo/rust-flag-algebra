@@ -1,4 +1,4 @@
-//! Example of flags.
+//! Implementations of flags.
 
 mod cgraph;
 mod digraph;

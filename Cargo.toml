@@ -1,6 +1,6 @@
 [package]
 name = "flag-algebra"
-version = "0.1.10"
+version = "0.1.11"
 authors = ["Rémi de Verclos <remi.de.verclos@gmail.com>"]
 description = "An implementation of Razborov's flag algebras"
 publish = true
@@ -23,13 +23,12 @@ bincode = "1.3.1"
 canonical-form = "0.9.4"
 typenum = "1.12.0"
 svg = "0.8.0"
-log = "0.4.11"
 simplelog = "0.8.0"
 ndarray-linalg = { version = "0.12.1", features = ["netlib"] }
 failure = "0.1.8"
 failure_derive = "0.1.8"
 arrayvec = "0.5.1"
-tinytemplate = "1.1.0"
+log = "0.4.11"
 
 [dev-dependencies]
 criterion = "0.3.3"

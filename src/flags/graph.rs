@@ -8,7 +8,10 @@ use crate::iterators::StreamingIterator;
 use canonical_form::Canonize;
 use std::fmt;
 
-/// An undirected graph.
+/// Undirected graphs.
+///
+/// Implementation of graphs by upper triangular adjacency matrix,
+/// reprensented as a boolean vector of length `n` choose `2`.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Serialize, Deserialize)]
 pub struct Graph {
     size: usize,

@@ -1,6 +1,6 @@
 # flag-algebra
 
-An implementation of
+A generic implementation of
 [flag algebras](http://people.cs.uchicago.edu/~razborov/files/flag.pdf).
 
 Flag algebras is a framework used to produce computer-assisted proofs of some inequalities in combinatorics, relying on Semi-Definite Programming.
@@ -14,7 +14,6 @@ extern crate flag_algebra;
 
 use flag_algebra::*;
 use flag_algebra::flags::Graph;
-use sdp::Problem;
 
 pub fn main() {
    // Work on the graphs of size 3.
@@ -39,6 +38,38 @@ pub fn main() {
    pb.write_sdpa("goodman").unwrap();
 }
 ```
+## Features
+This library can currently do the following.
+* Generate list of flags from scratch.
+* Generate flag algebra operators and memoize them in files.
+* Compute in the flag algebra (multiplication, unlabeling) and add user-defined vectors.
+* Define, manipulate or amplify flag inequalities (for instance by multiplying an inequality by all flags).
+* Write problem in .spda format or directly run the CSDP solver.
+* Automatically eliminate unnecessary constraints (in a naive way).
+* It is generic:
+defining new specific class/subclass of flags boils down to implementing a Rust Trait.
+* Output flags, problems or certificates as html pages
+in (hopefully) human-readable format (provided that it has a reasonnable size).
 
+## Supported flags
+This library is generic.
+To use a kind combinatorial objects as flags (e.g. graphs), it suffices to
+implement the [Flag](trait.Flag.html) trait for the corresponding Rust datatype.
+
+Currently, [Flag](trait.Flag.html) is implemented for [Graphs](flags/struct.Graph.html),
+[Digraphs](flags/struct.Digraph.html) and [edge-colored graphs](flags/struct.CGraph.html)
+with some fixed number of colors.
+
+Beside implementing directly [Flag](trait.Flag.html) for your own types, two mechanisms help
+to define flag classes based on an existing flag class `F`.
+* The [Colored](flags/struct.Colored.html) structure for defining vertex-colored flags.
+If `N` is an integer identifier, `Colored<F, N>` is the type for flags of type `F`
+where the vertices are further colored in `N` different colors.
+`Colored<F, N>` automatically implement `Flag` when `F` does.
+* The [Subclass](struct.SubClass.html) structure and
+the [SubFlag](trait.SubFlag.html) for classes that are subsets
+of already defined classes.
+This is usefull for instance for computing in triangle-free graphs flag algebra
+without considering other graphs.
 
 License: GPL-3.0

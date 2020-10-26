@@ -13,6 +13,14 @@ use std::fmt::Debug;
 use typenum::Unsigned;
 
 /// Edge-colored graphs.
+/// 
+/// Implentation of graphs whose edges are colored by a number in a set `{1,…,k-1}`
+/// (So that accounting for non-edges, each pair has `k` possible states).
+///
+/// The number `k` is determined at compile-time by a type-level number
+/// from the `typenum` crate.
+/// Specifically, `CGraph<Uk>` represents `k`-edge-colored graphs if `Uk` is
+/// the `typenum` type reprenting `k`.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Serialize, Deserialize)]
 pub struct CGraph<E> {
     pub size: usize,
@@ -122,6 +130,8 @@ where
         }
     }
 
+    // Should be something like `concat!("CGraph_", E::USIZE)` which currently does not work
+    // Waiting for further support of `const fn`
     const NAME: &'static str = "CGraph_FIXME";
 
     fn size_zero_flags() -> Vec<Self> {

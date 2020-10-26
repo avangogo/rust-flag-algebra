@@ -11,28 +11,33 @@ use std::fmt;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
-/// Trait for object that can be used as flags.
+/// Trait for combinatorial objects that can be used as flags.
+///
+/// Flags must implement the `Canonize` trait
+/// from the `canonical_form` crate, that allows
+/// reduction modulo isomorphism.
 pub trait Flag
 where
     Self: Canonize + Debug + Display + Serialize + DeserializeOwned,
 {
     /// Returns the subflag induced by the vertices in the slice `set`.
     fn induce(&self, set: &[usize]) -> Self;
-    /// Returns the set of all flags of size `n`.
+    /// Returns the set of all flags of size 0.
     ///
-    /// This list can have redundancy and is a priori not reduced modulo isomorphism.
-    /// It is used for initialisation in the flag construction.
+    /// This list is used for initialisation in the flag construction.
     fn size_zero_flags() -> Vec<Self>;
     /// Return the list of flags of size `self.size() + 1` that contain `self`
     /// as an induced subflag.
     ///
     /// This list can have redundancy and is a priori not reduced modulo isomorphism.    
     fn superflags(&self) -> Vec<Self>;
-    /// A name for this type of flags. For instance "Graph".
-    /// This name is used for naming the associated data subdirectory.
+    /// A unique name for this type of flags. For instance "Graph".
+    /// This nameis used for naming the associated data subdirectory.
     const NAME: &'static str;
 
     // caracteristic
+    /// Setting this parameter to `false` deactivate checks that induced subflags exists.
+    /// Must be `true` in every classic case.
     const HEREDITARY: bool = true;
 
     // provided methods
