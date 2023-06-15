@@ -56,7 +56,7 @@ where
     }
     /// Load the object if the file exists and is valid.
     fn load(&self, path: &Path) -> Result<A, Box<dyn Error>> {
-        let file = File::open(&path)?;
+        let file = File::open(path)?;
         let mut buf = BufReader::new(file);
         let data = bincode::deserialize_from(&mut buf)?;
         Ok(data)
@@ -92,6 +92,7 @@ where
 
 /// Type (or root) of a flag.
 /// It is identified by its size and its id in the list of flags of that size.
+#[allow(clippy::derived_hash_with_manual_eq)]
 #[derive(Debug, Hash)]
 pub struct Type<F> {
     /// Size of the type.
@@ -105,19 +106,23 @@ pub struct Type<F> {
 impl<F> Type<F> {
     /// Constructor for the type.
     pub fn new(size: usize, id: usize) -> Self {
-        Self { size, id, phantom: PhantomData,}
+        Self {
+            size,
+            id,
+            phantom: PhantomData,
+        }
     }
     /// Create a type of size 0.
     pub fn empty() -> Self {
         Self::new(0, 0)
     }
     /// Return wether the input has size zero.
-    pub fn is_empty(&self) -> bool {
-        self == &Self::empty()
+    pub fn is_empty(self) -> bool {
+        self == Self::empty()
     }
     /// Write a string that identifies the type.
-    fn to_string_suffix(&self) -> String {
-        if *self == Self::empty() {
+    fn to_string_suffix(self) -> String {
+        if self.is_empty() {
             String::new()
         } else {
             format!("_type_{}_id_{}", self.size, self.id)
@@ -125,8 +130,9 @@ impl<F> Type<F> {
     }
     /// Create the type corresponding to g
     pub fn from_flag<G>(g: &G) -> Self
-        where F: Flag,
-              G: Into<F> + Clone,
+    where
+        F: Flag,
+        G: Into<F> + Clone,
     {
         let f: F = g.clone().into();
         let size = f.size();
@@ -139,13 +145,14 @@ impl<F> Type<F> {
     }
     /// Iterate on all types of a given size.
     pub fn types_with_size(size: usize) -> impl Iterator<Item = Self>
-        where F: Flag,
+    where
+        F: Flag,
     {
         let n_types = Basis::<F>::new(size).get().len();
         (0..n_types).map(move |id| Self::new(size, id))
     }
     /// Print the type identifier in a short way.
-    pub fn print_concise(&self) -> String {
+    pub fn print_concise(self) -> String {
         if self.is_empty() {
             String::new()
         } else {
@@ -176,10 +183,7 @@ impl<F> Basis<F> {
     /// Constructor for a basis.
     fn make(size: usize, t: Type<F>) -> Self {
         assert!(t.size <= size);
-        Self {
-            size,
-            t,
-        }
+        Self { size, t }
     }
     /// Basis of flag with `size` vertices and without type.
     ///```
@@ -208,19 +212,19 @@ impl<F> Basis<F> {
     /// let t = Type::from_flag(&edge);
     /// let basis: Basis<Graph> = Basis::new(4).with_type(t);
     ///```
-    pub fn with_type(&self, t: Type<F>) -> Self {
+    pub fn with_type(self, t: Type<F>) -> Self {
         Self::make(self.size, t)
     }
     /// Basis of flag with same size as `self` without type `t`.
-    pub fn without_type(&self) -> Self {
+    pub fn without_type(self) -> Self {
         self.with_type(Type::empty())
     }
     /// Basis of flag with `size` vertices and same type as `self`.
-    pub fn with_size(&self, size: usize) -> Self {
+    pub fn with_size(self, size: usize) -> Self {
         Self::make(size, self.t)
     }
     /// Print the basis information in a short way.
-    pub fn print_concise(&self) -> String {
+    pub fn print_concise(self) -> String {
         if self.t == Type::empty() {
             format!("{}", self.size)
         } else {
@@ -367,11 +371,7 @@ impl<F: Flag> SubflagCount<F> {
     pub fn make(k: usize, n: usize, type_: Type<F>) -> Self {
         assert!(type_.size <= k);
         assert!(k <= n);
-        Self {
-            k,
-            n,
-            type_,
-        }
+        Self { k, n, type_ }
     }
 
     pub fn from_to(inner: Basis<F>, outer: Basis<F>) -> Self {
@@ -524,7 +524,7 @@ impl<F> MulAndUnlabel<F> {
         })
     }
     pub fn reduced(&self) -> ReducedByInvariant<F> {
-        ReducedByInvariant(self.clone())
+        ReducedByInvariant(*self)
     }
 }
 
@@ -574,7 +574,7 @@ impl<F: Flag> Savable<Vec<CsMat<i64>>, F> for MulAndUnlabel<F> {
         let pre = pre_image(n, &unlab_f);
         let mut res = Vec::new();
         for pre_i in &pre {
-            let mut res_i = CsMat::zero(mul[0].shape());
+            let mut res_i = CsMat::<u32>::zero(mul[0].shape());
             for &j in pre_i {
                 res_i = &res_i + &(&mul[j] * unlab_c[j]); // can be optimized
             }
@@ -629,12 +629,11 @@ impl<F: Flag> Savable<(Vec<CsMat<i64>>, Vec<CsMat<i64>>), F> for ReducedByInvari
         let mut res_anti = Vec::with_capacity(mul_and_unlabel.len());
         for m in mul_and_unlabel.into_iter() {
             let invariant = &(&invariant_mat.transpose_view() * &m) * &invariant_mat;
-            let antiinvariant =
-                if antiinvariant_mat.cols() == 0 {
-                    CsMat::zero((0,0)) // avoiding a small bug of sprs
-                } else {
-                    &(&antiinvariant_mat.transpose_view() * &m) * &antiinvariant_mat
-                };
+            let antiinvariant = if antiinvariant_mat.cols() == 0 {
+                CsMat::zero((0, 0)) // avoiding a small bug of sprs
+            } else {
+                &(&antiinvariant_mat.transpose_view() * &m) * &antiinvariant_mat
+            };
             res_inv.push(invariant);
             res_anti.push(antiinvariant);
         }
@@ -782,7 +781,7 @@ where
     /// use flag_algebra::flags::Graph;
     ///
     /// // Sum of graphs of size 3 with an even number of edges
-    /// let b = Basis::<Graph>::new(3); 
+    /// let b = Basis::<Graph>::new(3);
     /// let sum = b.from_indicator(|g, _| g.edges().count() % 2 == 0 );
     ///
     /// let e3: QFlag<f64, Graph> = flag(&Graph::new(3, &[]));
@@ -795,7 +794,7 @@ where
     /// let basis = Basis::new(3).with_type(t);
     /// let sum: QFlag<f64, Graph> = basis.from_indicator(|g, _| g.edge(0, 1) || g.edge(0, 2) );
     /// ```
-    pub fn from_indicator<N>(&self, f: fn(&F, usize) -> bool) -> QFlag<N, F>
+    pub fn from_indicator<N>(self, f: fn(&F, usize) -> bool) -> QFlag<N, F>
     where
         N: One + Zero,
     {
@@ -811,10 +810,10 @@ where
             })
             .collect();
         QFlag {
-            basis: *self,
+            basis: self,
             data: Array::from(vec),
             scale: 1,
-            expr: Expr::FromIndicator(f, *self),
+            expr: Expr::FromIndicator(f, self),
         }
     }
     /// Return the formal sum of `f(g)*g` on the flags `g` of the basis `self`.
@@ -824,11 +823,11 @@ where
     /// use flag_algebra::flags::Graph;
     ///
     /// // Sum of graphs of size 3 weighted by their number of edges
-    /// let b = Basis::<Graph>::new(3); 
+    /// let b = Basis::<Graph>::new(3);
     /// let sum: QFlag<f64, Graph>  = b.from_coeff(|g, _| g.edges().count() as f64 );
     /// ```
 
-    pub fn from_coeff<N, M, P>(&self, f: P) -> QFlag<N, F>
+    pub fn from_coeff<N, M, P>(self, f: P) -> QFlag<N, F>
     where
         P: Fn(&F, usize) -> M + 'static,
         M: Into<N>,
@@ -845,7 +844,7 @@ where
             expr: Expr::FromFunction(f, *self),
         }
     }
-        pub fn random<N>(self) -> QFlag<N, F>
+    pub fn random<N>(self) -> QFlag<N, F>
     where
         N: From<i16>,
     {
@@ -876,7 +875,7 @@ where
             basis: self,
             data: Array::zeros(size),
             scale: 1,
-            expr: Expr::Flag(id, self.clone()),
+            expr: Expr::Flag(id, self),
         };
         res.data[id] = N::one();
         res
@@ -896,7 +895,7 @@ where
             basis: self,
             data,
             scale: 1,
-            expr: Expr::Flag(id, self.clone()),
+            expr: Expr::Flag(id, self),
         }
     }
     /// Returns the list of identifiers of all Square-and-unlabel operators

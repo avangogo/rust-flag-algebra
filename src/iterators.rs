@@ -27,7 +27,7 @@ where
         Self: Sized,
     {
         let mut count = 0;
-        while let Some(_) = self.next() {
+        while self.next().is_some() {
             count += 1;
         }
         count

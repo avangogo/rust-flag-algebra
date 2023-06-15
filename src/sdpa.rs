@@ -105,7 +105,7 @@ pub struct SdpaProblem {
 
 impl SdpaProblem {
     pub fn write(&self, filename: &str) -> Result<(), io::Error> {
-        let mut w = BufWriter::new(File::create(&filename)?);
+        let mut w = BufWriter::new(File::create(filename)?);
         writeln!(w, "{}", self.b.len())?;
         writeln!(w, "{}", self.block_sizes.len())?;
         for i in &self.block_sizes {
@@ -380,7 +380,7 @@ fn push_identities(
         } else {
             scale_nondiag
         };
-        for i in 0..blocksize.abs() as usize {
+        for i in 0..blocksize.unsigned_abs() as usize {
             coeffs.push(SdpaCoeff {
                 mat: matrix_number,
                 block: block + 1,

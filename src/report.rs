@@ -1,4 +1,4 @@
-use self::ndarray_linalg::{lapack::UPLO, Eigh};
+use self::ndarray_linalg::{Eigh, UPLO};
 use crate::algebra::*;
 use crate::draw::Draw;
 use crate::expr::Names;
@@ -44,7 +44,7 @@ impl<F: Draw> Html for F {
     }
 }
 
-const CSS: &'static str = "
+const CSS: &str = "
 :root {
     --color1: #a3bbdc;
     --color2: #dae4f1;
@@ -102,7 +102,7 @@ svg.inline-flag {
 }
 ";
 
-const MATHJAX: &'static str = "<script>
+const MATHJAX: &str = "<script>
 MathJax = {
   tex: {
     inlineMath: ['\\\\[', '\\\\]', ['$','$']],
@@ -127,7 +127,7 @@ where
             writeln!(
                 w,
                 "<span>{}</span>",
-                x.draw_with_parameters(|_| 0, type_size).to_string()
+                x.draw_with_parameters(|_| 0, type_size)
             )?;
             writeln!(w, "<span>{}</span></div>", label)?;
         }
@@ -226,13 +226,7 @@ where
         if !inline_names.is_empty() {
             let defs: Vec<_> = inline_names
                 .into_iter()
-                .map(|(name, svg)| {
-                    format!(
-                        "${}=$ {}",
-                        name,
-                        svg.set("class", "inline-flag").to_string()
-                    )
-                })
+                .map(|(name, svg)| format!("${}=$ {}", name, svg.set("class", "inline-flag")))
                 .collect();
             writeln!(w, "<p>where {}.</p>", inlined_list(defs.iter()))?
         }
@@ -255,7 +249,7 @@ where
                 writeln!(w, "<p>${}$ contains the following flags:</p>", name)?;
                 writeln!(w, "<div class=\"flags\">")?;
                 for flag in flags.iter() {
-                    writeln!(w, "{}", flag.draw_typed(basis.t.size).to_string())?;
+                    writeln!(w, "{}", flag.draw_typed(basis.t.size))?;
                 }
                 writeln!(w, "</div>")?;
             }
@@ -314,7 +308,7 @@ fn footer<W: Write>(w: &mut W) -> Result<()> {
     writeln!(w, "</body></html>")
 }
 
-pub fn print_report<'a, N, F>(
+pub fn print_report<N, F>(
     // /!\ select must be applied to pb only
     pb: &ProblemView<N, F>,
     cert: &Certificate<f64>,
@@ -344,7 +338,7 @@ where
         w,
         "<details><summary>Flag expression of the objective.</summary><div>"
     )?;
-    round(&pb.obj).print_html(&mut w)?;
+    round(pb.obj).print_html(&mut w)?;
     writeln!(w, "</div></details>")?;
     writeln!(w, "</div>")?;
 

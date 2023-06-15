@@ -30,7 +30,7 @@ impl<'a> Iterator for EdgeIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.u += 1;
-        if self.u >= self.v  {
+        if self.u >= self.v {
             self.u = 0;
             self.v += 1;
         }
@@ -139,7 +139,7 @@ impl Canonize for Graph {
         vec![self.nbrs(v)]
     }
     fn apply_morphism(&self, p: &[usize]) -> Self {
-        self.induce(&combinatorics::invert(&p))
+        self.induce(&combinatorics::invert(p))
     }
 }
 

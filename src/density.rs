@@ -234,7 +234,7 @@ pub fn invariant_classes<F: Flag>(eta: &[usize], type_size: usize, input_vec: &[
     let mut class = vec![None; input_vec.len()];
     let mut n_classes = 0;
     for (i, flag) in input_vec.iter().enumerate() {
-        if class[i] == None {
+        if class[i].is_none() {
             let new_class = n_classes;
             n_classes += 1;
             for phi in &type_automorphisms {

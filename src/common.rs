@@ -100,8 +100,6 @@ pub trait FlatMatrix: Sized {
 #[derive(Clone, Debug, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Sym<A>(Vec<A>);
 
-use std;
-
 impl<A> FlatMatrix for Sym<A> {
     type Item = A;
     type LineIter = Range<usize>;

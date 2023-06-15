@@ -13,7 +13,7 @@ use std::fmt::Debug;
 use typenum::Unsigned;
 
 /// Edge-colored graphs.
-/// 
+///
 /// Implentation of graphs whose edges are colored by a number in a set `{1,…,k-1}`
 /// (So that accounting for non-edges, each pair has `k` possible states).
 ///
@@ -114,7 +114,7 @@ where
     }
 
     fn apply_morphism(&self, p: &[usize]) -> Self {
-        self.induce(&combinatorics::invert(&p))
+        self.induce(&combinatorics::invert(p))
     }
 }
 

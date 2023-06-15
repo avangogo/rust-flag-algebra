@@ -16,7 +16,7 @@ const C1: f64 = C; // Constant for which we know it holds
 
 pub fn main() {
     init_default_log();
-    
+
     // Work basis.
     let b = Basis::new(FLAG_SIZE);
 
@@ -25,7 +25,7 @@ pub fn main() {
     let out_edge = b21.flag(&Digraph::new(2, &[(0, 1)]).into());
 
     let outdegree_is_c = out_edge.at_least(C).multiply_and_unlabel(b).equality();
-    
+
     // 2. Density of forks is at least 3(3c-1)^2/a
 
     // Constant for the Chudnovsky-Seymour-Sullivan conjecture
@@ -50,13 +50,13 @@ pub fn main() {
             }
         }
         true
-    };
+    }
 
     // Return the sum of sigma sources of the basis in input
     fn sum_of_sigma_sources(basis: Basis<F>) -> V {
         assert_eq!(basis.size, basis.t.size + 1);
         basis.from_indicator(is_a_sigma_source)
-    };
+    }
 
     // Recover the type of the basis in input (as a graph)
     fn get_graph_type(basis: Basis<F>) -> F {

@@ -4,8 +4,8 @@ use crate::expr::{Expr, Names, VarRange};
 use crate::flag::Flag;
 use crate::operator::*;
 use ndarray::{Array1, ScalarOperand};
-use num::{FromPrimitive, Integer, Num, pow::Pow};
-use sprs::{CsMat, CsMatView, CsVec, TriMat};
+use num::{pow::Pow, FromPrimitive, Integer, Num};
+use sprs::{CsMat, CsMatView, CsVec, MulAcc, TriMat};
 use std::fmt::*;
 use std::ops::*;
 
@@ -180,7 +180,7 @@ where
     F: Flag,
 {
     type Output = QFlag<N, F>;
-    
+
     fn pow(self, n: usize) -> QFlag<N, F> {
         match n {
             0 => self.basis.with_size(self.basis.t.size).one(),
@@ -229,7 +229,7 @@ where
     assert_eq!(rhs.len(), matrix.cols());
     let mut res = N::zero();
     for (v, (i, j)) in matrix.iter() {
-        res = res + (N::from_u32(v.clone()).unwrap() * lhs[i].clone() * rhs[j].clone());
+        res = res + (N::from_u32(*v).unwrap() * lhs[i].clone() * rhs[j].clone());
     }
     res
 }
@@ -547,7 +547,7 @@ impl<N, F: Flag> IneqMeta<N, F> {
     fn multiply(&self, rhs_basis: &Basis<F>, rhs_expr: Expr<N, F>) -> Self {
         let forall = if let Expr::Var(_) = rhs_expr {
             match self.forall {
-                None => Some(VarRange::InBasis(rhs_basis.clone())),
+                None => Some(VarRange::InBasis(*rhs_basis)),
                 Some(_) => unimplemented!(),
             }
         } else {
@@ -649,7 +649,7 @@ where
     }
     fn untype(&self, untype_matrix: &CsMat<N>, denom: u32) -> Self
     where
-        N: Copy + Num + Default + std::iter::Sum + AddAssign + Send + Sync + FromPrimitive,
+        N: Clone + Num + Default + MulAcc + Send + Sync + FromPrimitive,
     {
         Self {
             flag: untype_matrix * &self.flag,
@@ -659,7 +659,7 @@ where
     // From profiling: Memory allocation here could be optimized
     fn multiply_by_all(self, table: &[CsMat<N>], acc: &mut Vec<Self>)
     where
-        N: Num + Copy + Send + Sync + std::iter::Sum + AddAssign + Default + Neg<Output = N>,
+        N: Num + Clone + Send + Sync + MulAcc + Default + Neg<Output = N>,
     {
         if let Some(other_size) = table.first().map(|mat| mat.cols()) {
             let one_sided = self.one_sided();
@@ -746,7 +746,7 @@ where
 
 impl<N, F> Ineq<N, F>
 where
-    N: Num + Copy + Send + Sync + Default + FromPrimitive + AddAssign + std::iter::Sum,
+    N: Num + Clone + Send + Sync + Default + FromPrimitive + AddAssign + std::iter::Sum + MulAcc,
     F: Flag,
 {
     /// If self is "`f` ≥ `x`", return the projection "`〚f〛 ≥ x`".
@@ -868,7 +868,7 @@ mod tests {
     fn test_qflags() {
         let qflag = QFlag {
             basis: Basis::<Graph>::new(1),
-            data: array![3., 2., -5., 3.14],
+            data: array![3., 2., -5., 45.14],
             scale: 42,
             expr: Expr::Zero,
         };
@@ -883,5 +883,4 @@ mod tests {
         assert_eq!(v.pow(2), &v * &v);
         assert_eq!(v.pow(3), &v * &(&v * &v));
     }
-
 }

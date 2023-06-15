@@ -12,7 +12,7 @@ use crate::flag::Flag;
 use crate::operator::*;
 use crate::sdpa::*;
 use arrayvec::ArrayVec;
-use ndarray_linalg::{lapack::UPLO, Cholesky, Eigh};
+use ndarray_linalg::{Cholesky, Eigh, UPLO};
 use num::*;
 use sprs::{CsMat, TriMat};
 use std::ops::Index;
@@ -101,10 +101,14 @@ where
 impl<N, F: Flag> Problem<N, F> {
     /// Create a minimization problem with the argument as objective function.
     pub fn minimize(obj: QFlag<N, F>) -> Self
-        where N: Display + Num + FromPrimitive + Clone + Neg<Output = N>,
+    where
+        N: Display + Num + FromPrimitive + Clone + Neg<Output = N>,
     {
         Self {
-            ineqs: vec![flags_are_nonnegative(obj.basis), total_sum_is_one(obj.basis)],
+            ineqs: vec![
+                flags_are_nonnegative(obj.basis),
+                total_sum_is_one(obj.basis),
+            ],
             cs: obj.basis.all_cs(),
             obj,
         }
@@ -160,7 +164,7 @@ where
             } else {
                 format!("{}/{}", count, max)
             }
-        };
+        }
         writeln!(
             file,
             "* {} groups of linear constraints ({})",
@@ -306,7 +310,7 @@ where
 {
     /// Write the semi-definite program in the file `filename` in the sdpa format.
     pub fn write_sdpa(&self, filename: &str) -> io::Result<()> {
-        self.view(&Selector::new(&self)).write_sdpa(filename)
+        self.view(&Selector::new(self)).write_sdpa(filename)
     }
     /// Rescale the objective according to its scale field.
     /// If this method is not used, the output of the sdp solver may need to be rescaled.
@@ -393,7 +397,7 @@ pub enum CSMode {
 
 use CSMode::*;
 
-type VecCsMode = ArrayVec<[CSMode; 2]>;
+type VecCsMode = ArrayVec<CSMode, 2>;
 
 /// Identifies a product-and-unlabel matrix with a symmetry reduction
 #[derive(Debug, Clone)]
@@ -485,7 +489,7 @@ impl<'a, N, F> Index<usize> for IneqSelect<'a, N, F> {
 impl<'a, N, F> IneqsSelect<'a, N, F> {
     pub fn iter(&'a self) -> IneqsIter<'a, N, F> {
         SelectIter {
-            content: &self,
+            content: self,
             iter: 0..self.selector.len(),
         }
     }
@@ -511,7 +515,7 @@ impl<'a, N, F> IneqsSelect<'a, N, F> {
 impl<'a, N, F> IneqSelect<'a, N, F> {
     pub fn iter(&'a self) -> IneqIter<'a, N, F> {
         SelectIter {
-            content: &self,
+            content: self,
             iter: 0..self.selector.len(),
         }
     }
@@ -627,15 +631,13 @@ impl Selector {
         self.cs
             .iter()
             .zip(self.cs_subspace.iter())
-            .map(|(cs_modes, subspace)| {
+            .flat_map(|(cs_modes, subspace)| {
                 cs_modes
                     .iter()
                     .map(move |&mode| subspace.orthogonal_matrices(mode))
             })
-            .flatten()
             .enumerate()
-            .map(|(i, iter_on_cs)| iter_on_cs.map(move |mat| (i, mat)))
-            .flatten()
+            .flat_map(|(i, iter_on_cs)| iter_on_cs.map(move |mat| (i, mat)))
     }
     pub fn weight(&self) -> (usize, usize) {
         let count_ineq = self.ineqs.iter().map(|l| l.len()).sum();
@@ -701,8 +703,8 @@ pub struct Certificate<N> {
 }
 
 impl Certificate<f64> {
-    pub fn from_file_select<'a, N, F: Flag>(
-        pb: &ProblemView<'a, N, F>,
+    pub fn from_file_select<N, F: Flag>(
+        pb: &ProblemView<'_, N, F>,
         name: &str,
     ) -> io::Result<Self> {
         let file = File::open(name)?;
@@ -765,7 +767,7 @@ impl Certificate<f64> {
         })
     }
     pub fn to_file(&self, name: &str) -> io::Result<()> {
-        let mut w = BufWriter::new(File::create(&name)?);
+        let mut w = BufWriter::new(File::create(name)?);
         // The value of the vector y is on the first line
         for v in &self.y {
             write!(w, "{} ", v)?;
@@ -850,7 +852,7 @@ impl Certificate<f64> {
     }
 }
 
-pub fn condense<'a, N, F>(ineq: IneqSelect<'a, N, F>, coeff: &[N]) -> (QFlag<N, F>, N)
+pub fn condense<N, F>(ineq: IneqSelect<'_, N, F>, coeff: &[N]) -> (QFlag<N, F>, N)
 where
     N: Num + Clone + ScalarOperand + AddAssign,
     F: Clone,
@@ -884,7 +886,7 @@ where
 {
     let mut res = N::zero();
     for (&v, (i, j)) in sprs {
-        res = res + N::from_i64(v).unwrap() * dense[(i, j)].clone()
+        res += N::from_i64(v).unwrap() * dense[(i, j)].clone()
     }
     res
 }

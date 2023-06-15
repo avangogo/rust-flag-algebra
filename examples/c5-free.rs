@@ -20,14 +20,13 @@ fn is_hamiltonian(g: &Graph) -> bool {
             }
         }
         false
-    };
-    explore(0, &mut path, &g)
+    }
+    explore(0, &mut path, g)
 }
 
 pub fn main() {
     let b = Basis::<Graph>::new(5);
-    let flags_with_c5: QFlag<i64, _> =
-        b.from_indicator(|g, _| is_hamiltonian(g) );
+    let flags_with_c5: QFlag<i64, _> = b.from_indicator(|g, _| is_hamiltonian(g));
     let edge = flag(&Graph::new(2, &[]));
     let pb = Problem {
         ineqs: vec![
@@ -38,6 +37,6 @@ pub fn main() {
         cs: b.all_cs(),
         obj: edge.expand(b),
     };
-    
+
     pb.write_sdpa("c5-free").unwrap();
 }

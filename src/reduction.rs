@@ -137,7 +137,7 @@ where
         for i in 0..self.select.ineqs.len() {
             if !self.protected[i] {
                 let mut select = self.select.clone();
-                let _ = select.ineqs[i].clear();
+                select.ineqs[i].clear();
                 let _ = self.run(select);
             }
         }
@@ -172,7 +172,7 @@ where
     where
         F: Draw,
     {
-        if self.optimal_value == None {
+        if self.optimal_value.is_none() {
             self.init();
         }
         self.print_report()
@@ -181,7 +181,7 @@ where
     where
         F: Draw,
     {
-        if self.optimal_value == None {
+        if self.optimal_value.is_none() {
             self.init();
         }
         self.cs_elim();
@@ -195,7 +195,7 @@ where
     where
         F: Draw,
     {
-        if self.optimal_value == None {
+        if self.optimal_value.is_none() {
             self.init()
         };
         self.cs_elim();
@@ -211,7 +211,7 @@ where
         F: Draw,
     {
         info!("Method 3");
-        if self.optimal_value == None {
+        if self.optimal_value.is_none() {
             self.init()
         };
         self.cs_elim();

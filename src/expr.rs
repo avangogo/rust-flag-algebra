@@ -37,11 +37,14 @@ pub struct Names<N, F> {
     pub sets: Vec<(String, Basis<F>, Vec<F>)>,
 }
 
+impl<N, F> Default for Names<N, F> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<N, F> Names<N, F> {
-    pub fn new() -> Self
-    where
-        F: Ord,
-    {
+    pub fn new() -> Self {
         Self {
             flags: BTreeMap::new(),
             types: BTreeMap::new(),
@@ -175,10 +178,7 @@ impl<N, F> Expr<N, F> {
         }
     }
     fn is_sum(&self) -> bool {
-        match self {
-            Add(_, _) => true,
-            _ => false,
-        }
+        matches!(self, Add(_, _))
     }
     pub fn latex(&self, names: &mut Names<N, F>) -> String
     where
@@ -200,12 +200,8 @@ impl<N, F> Expr<N, F> {
                     format!("{} + {}", a.latex0(names), b.latex0(names))
                 }
             }
-            Mul(a, b) => format!(
-                "{}\\cdot {}",
-                Paren(&a).latex(names),
-                Paren(&b).latex(names)
-            ),
-            Neg(a) => format!("-{}", Paren(&a).latex(names)),
+            Mul(a, b) => format!("{}\\cdot {}", Paren(a).latex(names), Paren(b).latex(names)),
+            Neg(a) => format!("-{}", Paren(a).latex(names)),
             Unlab(a) => format!(
                 "\\left[\\!\\!\\left[{}\\right]\\!\\!\\right]",
                 a.latex0(names)
@@ -218,7 +214,7 @@ impl<N, F> Expr<N, F> {
                 if *latex {
                     format!("\\textrm{{{}}}", name)
                 } else {
-                    format!("{}", e.latex0(names))
+                    e.latex0(names)
                 }
             }
             Flag(i, basis) => names.name_flag(*i, *basis),
@@ -286,7 +282,7 @@ where
         match self.simplify() {
             Add(a, b) => {
                 if let Neg(b1) = &*b {
-                    write!(f, "{} - {}", a, Paren(&b1))
+                    write!(f, "{} - {}", a, Paren(b1))
                 } else {
                     write!(f, "{} + {}", a, b)
                 }
@@ -452,7 +448,7 @@ impl<N, F> Expr<N, F> {
             Var(i) => Var(*i),
             Flag(id, b) => Flag(*id, *b),
             Unknown => Unknown,
-            Num(n) => Num(Rc::new(f(&*n))),
+            Num(n) => Num(Rc::new(f(n))),
             Zero => Zero,
             One => One,
         }
@@ -470,11 +466,11 @@ impl<N, F> Clone for Expr<N, F> {
             Neg(a) => Neg(a.clone()),
             Unlab(a) => Unlab(a.clone()),
             Num(a) => Num(a.clone()),
-            Var(a) => Var(a.clone()),
-            Named(a, b, c) => Named(a.clone(), b.clone(), c.clone()),
-            Flag(a, b) => Flag(a.clone(), b.clone()),
-            FromFunction(a, b) => FromFunction(a.clone(), b.clone()),
-            FromIndicator(a, b) => FromIndicator(a.clone(), b.clone()),
+            Var(a) => Var(*a),
+            Named(a, b, c) => Named(a.clone(), b.clone(), *c),
+            Flag(a, b) => Flag(*a, *b),
+            FromFunction(a, b) => FromFunction(a.clone(), *b),
+            FromIndicator(a, b) => FromIndicator(*a, *b),
             Unknown => Unknown,
             Zero => Zero,
             One => One,

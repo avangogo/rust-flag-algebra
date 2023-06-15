@@ -9,19 +9,15 @@ use std::ops::Neg;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Serialize, Deserialize)]
 /// The arc between two nodes of a directed graphs.
+#[derive(Default)]
 pub enum Arc {
     /// No arc.
+    #[default]
     None,
     /// Arc from the first to the second vertex considered.
     Edge,
     /// Arc from the second to the first vertex considered.
     BackEdge,
-}
-
-impl Default for Arc {
-    fn default() -> Self {
-        None
-    }
 }
 
 impl Neg for Arc {

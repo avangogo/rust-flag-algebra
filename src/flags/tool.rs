@@ -134,7 +134,7 @@ mod tests {
             phantom: PhantomData,
         };
         let h: G2 = Colored {
-            content: p3.clone(),
+            content: p3,
             color: vec![1, 0, 0],
             phantom: PhantomData,
         };

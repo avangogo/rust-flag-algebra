@@ -22,7 +22,7 @@ pub fn main() {
         // Minimize density of triangle plus density of independent of size 3.
         obj: k3 + e3,
     };
-    
+
     // Write the correspondind SDP program in "goodman.sdpa".
     // This program can then be solved by CSDP.
     pb.write_sdpa("goodman").unwrap();
