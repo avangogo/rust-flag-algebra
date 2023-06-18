@@ -3,6 +3,5 @@
 *#
 *~
 *.sdpa
-Cargo.lock
 target/*
 data/*

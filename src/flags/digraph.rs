@@ -1,7 +1,7 @@
-//! Example of flags: directed graphs.
+//! `[Digraph]`s and their flag implementation.
 use crate::combinatorics;
-use crate::common::*;
 use crate::flag::{Flag, SubClass, SubFlag};
+use crate::flags::common::*;
 use crate::iterators::{Functions, StreamingIterator};
 use canonical_form::Canonize;
 use std::fmt;
@@ -35,21 +35,70 @@ impl Neg for Arc {
 use Arc::*;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Serialize, Deserialize)]
-/// Directed graphs.
+/// Loopless oriented graphs.
+///
+/// Every pair of vertices has at most one edge.
+/// The possible relations between two vertices is described by the type [`Arc`].
 pub struct Digraph {
     /// Number of vertices.
     size: usize,
     /// Flat matrix of arcs.
-    pub edge: AntiSym<Arc>,
+    edge: AntiSym<Arc>,
 }
 
 impl Digraph {
+    /// Create an oriented graph with `n` vertices and arcs in `arcs`.
+    ///
+    /// # Panics
+    /// * If `arcs` contains vertices not in `{0, ..., n-1}`
+    /// * If a loop `(u, u)` is provided
+    /// * If some arc is provided twice
+    /// * If both arcs `(u, v)` and `(v, u)` are provided
+    /// ```
+    /// use flag_algebra::flags::Digraph;
+    ///
+    /// // Oriented path with 3 vertices `0 -> 1 -> 2`
+    /// let p3 = Digraph::new(3, [(0, 1), (1, 2)]);
+    /// ```
+    pub fn new<I>(n: usize, arcs: I) -> Self
+    where
+        I: IntoIterator<Item = (usize, usize)>,
+    {
+        let mut new_edge = AntiSym::new(None, n);
+        for (u, v) in arcs {
+            check_arc((u, v), n);
+            assert!(
+                new_edge.get(u, v) == None,
+                "Pair {{{u}, {v}}} specified twice"
+            );
+            new_edge.set((u, v), Edge);
+        }
+        Self {
+            size: n,
+            edge: new_edge,
+        }
+    }
+    /// Oriented graph with `n` vertices and no edge.
+    /// ```
+    /// use flag_algebra::flags::Digraph;
+    /// assert_eq!(Digraph::empty(4), Digraph::new(4, []));
+    /// ```
+    pub fn empty(n: usize) -> Self {
+        Self {
+            size: n,
+            edge: AntiSym::new(None, n),
+        }
+    }
     /// Number of vertices
     pub fn size(&self) -> usize {
         self.size
     }
-
-    /// Out-neigborhood of `v` in `self`.
+    /// Out-neigborhood of `v`.
+    /// ```
+    /// use flag_algebra::flags::Digraph;
+    /// let p3 = Digraph::new(3, [(0,1), (1,2)]);
+    /// assert_eq!(p3.out_nbrs(1), vec![2]);
+    /// ```
     pub fn out_nbrs(&self, v: usize) -> Vec<usize> {
         let mut res = Vec::new();
         for u in 0..self.size {
@@ -59,7 +108,12 @@ impl Digraph {
         }
         res
     }
-    /// In-neigborhood of `v` in `self`.
+    /// In-neigborhood of `v`.
+    /// ```
+    /// use flag_algebra::flags::Digraph;
+    /// let p3 = Digraph::new(3, [(0,1), (1,2)]);
+    /// assert_eq!(p3.in_nbrs(1), vec![0]);
+    /// ```
     pub fn in_nbrs(&self, v: usize) -> Vec<usize> {
         let mut res = Vec::new();
         for u in 0..self.size {
@@ -69,30 +123,19 @@ impl Digraph {
         }
         res
     }
-    /// Directed graph with `n` vertices and arcs `arcs`.
-    pub fn new(n: usize, arcs: &[(usize, usize)]) -> Self {
-        let mut new_edge = AntiSym::new(None, n);
-        for &(u, v) in arcs {
-            assert!(u < n);
-            assert!(v < n);
-            assert!(u != v);
-            assert!(new_edge.get(u, v) == None);
-            new_edge.set((u, v), Edge);
-        }
-        Self {
-            size: n,
-            edge: new_edge,
-        }
+    /// Oriented relation between `u` to `v`.
+    /// ```
+    /// use flag_algebra::flags::{Digraph, Arc};
+    /// let p3 = Digraph::new(3, [(0,1), (1,2)]);
+    /// assert_eq!(p3.arc(0, 1), Arc::Edge);
+    /// assert_eq!(p3.arc(1, 0), Arc::BackEdge);
+    /// assert_eq!(p3.arc(0, 2), Arc::None);
+    /// ```
+    pub fn arc(&self, u: usize, v: usize) -> Arc {
+        check_arc((u, v), self.size);
+        self.edge.get(u, v)
     }
-    /// Directed graph with `n` vertices and no edge.
-    pub fn empty(n: usize) -> Self {
-        Self {
-            size: n,
-            edge: AntiSym::new(None, n),
-        }
-    }
-
-    fn triangle_free(&self) -> bool {
+    fn is_triangle_free(&self) -> bool {
         for u in 0..self.size {
             // Assume u is the largest vertex
             for v in 0..u {
@@ -108,7 +151,7 @@ impl Digraph {
         true
     }
 
-    /// Directed graph obtained from `self` by adding a vertex and every edge
+    /// Oriented graph obtained from `self` by adding a vertex and every edge
     /// from the rest of the graph to that vertex.
     pub fn add_sink(&self) -> Self {
         let n = self.size;
@@ -137,6 +180,20 @@ impl fmt::Display for Digraph {
         }
         write!(f, " }})")
     }
+}
+
+fn check_vertex(u: usize, graph_size: usize) {
+    assert!(
+        u < graph_size,
+        "Invalid vertex {u}: the vertex set is {{0, ..., {}}}",
+        graph_size - 1
+    );
+}
+
+fn check_arc((u, v): (usize, usize), graph_size: usize) {
+    check_vertex(u, graph_size);
+    check_vertex(v, graph_size);
+    assert!(u != v, "Invalid arc ({u}, {v}): Digraph have no loop");
 }
 
 impl Canonize for Digraph {
@@ -171,11 +228,10 @@ impl Flag for Digraph {
     }
 
     fn superflags(&self) -> Vec<Self> {
-        //FIXME
         let n = self.size;
         let mut res = Vec::new();
         let mut iter = Functions::new(n, 3);
-        let arcs = vec![Edge, BackEdge, None];
+        let arcs = [Edge, BackEdge, None];
         while let Some(f) = iter.next() {
             let mut edge = self.edge.clone();
             edge.resize(n + 1, None);
@@ -189,6 +245,8 @@ impl Flag for Digraph {
 }
 
 /// Indicator for digraph without directed triangle.
+///
+/// Makes `SubClass<Digraph, TriangleFree>` usable as flags.
 #[derive(Debug, Clone, Copy)]
 pub enum TriangleFree {}
 
@@ -196,7 +254,7 @@ impl SubFlag<Digraph> for TriangleFree {
     const SUBCLASS_NAME: &'static str = "Triangle-free digraph";
 
     fn is_in_subclass(flag: &Digraph) -> bool {
-        flag.triangle_free()
+        flag.is_triangle_free()
     }
 }
 

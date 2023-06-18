@@ -1,10 +1,10 @@
 use self::ndarray_linalg::{Eigh, UPLO};
 use crate::algebra::*;
-use crate::draw::Draw;
 use crate::expr::Names;
 use crate::flag::Flag;
 use crate::operator::{Basis, Savable};
 use crate::sdp::*;
+use crate::tools::Draw;
 use ndarray::ScalarOperand;
 use num::{FromPrimitive, Num, Zero};
 
@@ -18,6 +18,7 @@ extern crate ndarray_linalg;
 use ndarray::Array1;
 use ndarray::Array2;
 
+/// Describe element in an html page
 pub trait Html {
     fn print_html<W: Write>(&self, w: &mut W) -> Result<()>;
 
@@ -281,7 +282,7 @@ impl Approx for f64 {
     }
 }
 
-fn round<N, F>(vec: &QFlag<N, F>) -> QFlag<N, F>
+fn round<N, F: Flag>(vec: &QFlag<N, F>) -> QFlag<N, F>
 where
     N: Approx + Zero + Clone,
 {
@@ -472,7 +473,7 @@ where
             let b = qflag.basis;
             let filename = format!("{}in{}t{}id{}", i, b.size, b.t.size, b.t.id);
             path.push(&filename);
-            path.set_extension("svg");
+            let _ = path.set_extension("svg");
             svg::save(&path, &flag.draw_typed(qflag.basis.t.size)).unwrap();
             let x = val.clone() / scale.clone();
             if x.is_one() {

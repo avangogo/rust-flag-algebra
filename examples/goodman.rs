@@ -1,11 +1,9 @@
-extern crate flag_algebra;
-
 use flag_algebra::*;
 use flags::Graph;
-use operator::Basis;
-use sdp::Problem;
 
 pub fn main() {
+    init_default_log();
+
     // Work on the graphs of size 3.
     let basis = Basis::new(3);
 
@@ -26,9 +24,4 @@ pub fn main() {
     // Write the correspondind SDP program in "goodman.sdpa".
     // This program can then be solved by CSDP.
     pb.write_sdpa("goodman").unwrap();
-
-    init_default_log();
-    let mut f = FlagSolver::new(pb, "goodman").protect(0);
-    f.minimize3();
-    f.print_report();
 }

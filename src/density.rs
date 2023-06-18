@@ -8,47 +8,6 @@ fn induce_and_reduce<F: Flag>(type_size: usize, f: &F, subset: &[usize]) -> F {
     f.induce(subset).canonical_typed(type_size)
 }
 
-/// Returns the number of induced subflags of `g` isomorphic to `f`,
-/// considered with type of size `type_size`.
-pub fn count_subflags<F: Flag>(type_size: usize, f: &F, g: &F) -> u32 {
-    // f must be in normal form
-    assert_eq!(*f, f.canonical_typed(type_size));
-    let k = f.size();
-    let n = g.size();
-    assert!(type_size <= k && k <= n);
-    let mut count = 0;
-    let mut iter = Choose::with_fixed_part(n, k, type_size);
-    while let Some(subset) = iter.next() {
-        if induce_and_reduce(type_size, g, subset) == *f {
-            count += 1;
-        }
-    }
-    count
-}
-
-/// Returns the number of split partitions of `g`
-/// with intersection `[type_size]`
-/// inducing `f1` and `f2`.
-pub fn count_split<F: Flag>(type_size: usize, f1: &F, f2: &F, g: &F) -> u32 {
-    assert_eq!(*f1, f1.canonical_typed(type_size));
-    assert_eq!(*f2, f2.canonical_typed(type_size));
-    let k1 = f1.size();
-    let k2 = f2.size();
-    let n = g.size();
-    assert!(type_size <= k1 && k1 <= n);
-    assert_eq!(n, k1 + k2 - type_size);
-    let mut count = 0;
-    let mut iter = Split::with_fixed_part(n, k1, type_size);
-    while let Some((subset1, subset2)) = iter.next() {
-        if *f1 == induce_and_reduce(type_size, g, subset1)
-            && *f2 == induce_and_reduce(type_size, g, subset2)
-        {
-            count += 1;
-        }
-    }
-    count
-}
-
 /// Returns a matrix `m`
 /// where `m[i,j]` is equal to
 /// `count_subflags(type_size, f_vec[i], g_vec[j])`.
@@ -283,6 +242,47 @@ mod tests {
     use crate::flags::*;
     use canonical_form::Canonize;
 
+    /// Returns the number of induced subflags of `g` isomorphic to `f`,
+    /// considered with type of size `type_size`.
+    fn count_subflags<F: Flag>(type_size: usize, f: &F, g: &F) -> u32 {
+        // f must be in normal form
+        assert_eq!(*f, f.canonical_typed(type_size));
+        let k = f.size();
+        let n = g.size();
+        assert!(type_size <= k && k <= n);
+        let mut count = 0;
+        let mut iter = Choose::with_fixed_part(n, k, type_size);
+        while let Some(subset) = iter.next() {
+            if induce_and_reduce(type_size, g, subset) == *f {
+                count += 1;
+            }
+        }
+        count
+    }
+
+    /// Returns the number of split partitions of `g`
+    /// with intersection `[type_size]`
+    /// inducing `f1` and `f2`.
+    fn count_split<F: Flag>(type_size: usize, f1: &F, f2: &F, g: &F) -> u32 {
+        assert_eq!(*f1, f1.canonical_typed(type_size));
+        assert_eq!(*f2, f2.canonical_typed(type_size));
+        let k1 = f1.size();
+        let k2 = f2.size();
+        let n = g.size();
+        assert!(type_size <= k1 && k1 <= n);
+        assert_eq!(n, k1 + k2 - type_size);
+        let mut count = 0;
+        let mut iter = Split::with_fixed_part(n, k1, type_size);
+        while let Some((subset1, subset2)) = iter.next() {
+            if *f1 == induce_and_reduce(type_size, g, subset1)
+                && *f2 == induce_and_reduce(type_size, g, subset2)
+            {
+                count += 1;
+            }
+        }
+        count
+    }
+
     fn count_subflags_ext<F: Flag>(sigma: usize, h: &F, g: &F) -> u32 {
         count_subflags(sigma, &h.canonical_typed(sigma), g)
     }
@@ -343,9 +343,9 @@ mod tests {
         let a = F::generate(k);
         let b = F::generate(n);
         let tab = count_subflag_tabulate(0, &a, &b);
-        for i in 0..a.len() {
-            for j in 0..b.len() {
-                assert_eq!(count_subflags(0, &a[i], &b[j]), csm_get(&tab, j, i))
+        for (i, ai) in a.iter().enumerate() {
+            for (j, bj) in b.iter().enumerate() {
+                assert_eq!(count_subflags(0, ai, bj), csm_get(&tab, j, i))
             }
         }
     }
@@ -355,12 +355,12 @@ mod tests {
         let right = F::generate(n - k);
         let prod = F::generate(n);
         let tab = count_split_tabulate(0, &left, &right, &prod);
-        for i in 0..left.len() {
-            for j in 0..right.len() {
-                for m in 0..prod.len() {
+        for (i, left_flag) in left.iter().enumerate() {
+            for (j, right_flag) in right.iter().enumerate() {
+                for (p, prod_flag) in prod.iter().enumerate() {
                     assert_eq!(
-                        count_split(0, &left[i], &right[j], &prod[m]),
-                        csm_get(&tab[m], i, j)
+                        count_split(0, left_flag, right_flag, prod_flag),
+                        csm_get(&tab[p], i, j)
                     )
                 }
             }

@@ -1,8 +1,8 @@
-//! Example of flags: Graphs.
+//! Undirected graphs and their implementation of `Flag`.
 
 use crate::combinatorics;
-use crate::common::*;
 use crate::flag::{Flag, SubFlag};
+use crate::flags::common::*;
 use crate::iterators;
 use crate::iterators::StreamingIterator;
 use canonical_form::Canonize;
@@ -19,7 +19,7 @@ pub struct Graph {
 }
 
 #[derive(Debug, Clone)]
-pub struct EdgeIterator<'a> {
+struct EdgeIterator<'a> {
     g: &'a Graph,
     u: usize,
     v: usize,
@@ -34,7 +34,7 @@ impl<'a> Iterator for EdgeIterator<'a> {
             self.u = 0;
             self.v += 1;
         }
-        assert!(self.u < self.v);
+        debug_assert!(self.u < self.v);
         if self.v >= self.g.size {
             None
         } else if self.g.edge(self.u, self.v) {
@@ -46,6 +46,20 @@ impl<'a> Iterator for EdgeIterator<'a> {
 }
 
 impl Graph {
+    /// Create a graph on `n` vertices with edge set `edge`.
+    /// The vertices of this graph are `0,...,n-1`.
+    pub fn new(n: usize, edge: &[(usize, usize)]) -> Self {
+        let mut new_edge = SymNonRefl::new(false, n);
+        for &(u, v) in edge {
+            assert!(u < n);
+            assert!(v < n);
+            new_edge[(u, v)] = true;
+        }
+        Self {
+            size: n,
+            edge: new_edge,
+        }
+    }
     /// Return the number of vertices in the graph
     pub fn size(&self) -> usize {
         self.size
@@ -61,20 +75,6 @@ impl Graph {
         }
         res
     }
-    /// Create a graph on `n` vertices with edge set `edge`.
-    /// The vertices of this graph are `0,...,n-1`.
-    pub fn new(n: usize, edge: &[(usize, usize)]) -> Self {
-        let mut new_edge = SymNonRefl::new(false, n);
-        for &(u, v) in edge {
-            assert!(u < n);
-            assert!(v < n);
-            new_edge[(u, v)] = true;
-        }
-        Self {
-            size: n,
-            edge: new_edge,
-        }
-    }
 
     /// Create the graph on `n` vertices with no edge.  
     pub fn empty(n: usize) -> Self {
@@ -89,8 +89,9 @@ impl Graph {
     pub fn edge(&self, u: usize, v: usize) -> bool {
         u != v && self.edge[(u, v)]
     }
-
-    pub fn edges(&self) -> EdgeIterator {
+    /// Returns an iterator on edges.
+    /// The edges are represented as couples `(u, v)` with `u < v`.
+    pub fn edges(&self) -> impl Iterator<Item = (usize, usize)> + '_ {
         EdgeIterator {
             g: self,
             u: 0,

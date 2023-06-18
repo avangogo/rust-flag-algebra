@@ -1,13 +1,14 @@
-use crate::draw::Draw;
+//! WIP tools to minimize certificates
+
 use crate::flag::Flag;
-use crate::report::*;
 use crate::sdp::*;
+use crate::tools::*;
 use log::*;
 use sprs::CsMat;
 
 /// A higher level object to try several selectors on a problem
 #[derive(Debug, Clone)]
-pub struct FlagSolver<F> {
+pub struct FlagSolver<F: Flag> {
     pb: Problem<f64, F>,
     name: String,
     pub optimal_value: Option<f64>,
@@ -100,7 +101,7 @@ where
     /// Try to minimize using the certificate
     pub fn minimize_certificate(&mut self) {
         self.write_sdpa(self.select.clone());
-        self.run_csdp().expect("Cannot find the same value");
+        let _ = self.run_csdp().expect("Cannot find the same value");
         let new_select = self
             .select
             .refine_with_certificate(&self.load_certificate(), &self.protected);
@@ -188,7 +189,7 @@ where
         self.ineqs_elim();
         self.thin_ineqs_elim();
         self.write_sdpa(self.select.clone());
-        self.run_csdp().unwrap();
+        let _ = self.run_csdp().unwrap();
         self.print_report()
     }
     pub fn minimize2(&mut self)
@@ -201,9 +202,9 @@ where
         self.cs_elim();
         self.thin_cs_elim();
         self.ineqs_elim();
-        //        self.minimize_certificate();
+        self.minimize_certificate();
         self.write_sdpa(self.select.clone());
-        self.run_csdp().unwrap();
+        let _ = self.run_csdp().unwrap();
         self.print_report()
     }
     pub fn minimize3(&mut self)
@@ -221,7 +222,7 @@ where
         self.thin_cs_elim();
         self.thin_ineqs_elim();
         self.write_sdpa(self.select.clone());
-        self.run_csdp().unwrap();
+        let _ = self.run_csdp().unwrap();
         println!("{:?}", self.optimal_value);
         self.print_report()
     }

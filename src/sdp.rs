@@ -1,16 +1,12 @@
 //! Create and manipulate semi-definite problems.
 
-extern crate ndarray;
-extern crate ndarray_linalg;
-extern crate num;
-extern crate sprs;
-extern crate svg;
-
 use crate::algebra::*;
 use crate::expr::Expr;
 use crate::flag::Flag;
 use crate::operator::*;
 use crate::sdpa::*;
+use crate::tools::csdp;
+use crate::tools::csdp_minimize_certificate;
 use arrayvec::ArrayVec;
 use ndarray_linalg::{Cholesky, Eigh, UPLO};
 use num::*;
@@ -41,7 +37,7 @@ use log::*;
 
 /// An optimization problem expressed in flags algebra.
 #[derive(Debug, Clone)]
-pub struct Problem<N, F> {
+pub struct Problem<N, F: Flag> {
     /// Set of contraint inequalities.
     pub ineqs: Vec<Ineq<N, F>>,
     /// Set of Cauchy-Schwarz inequlities to be used.
@@ -123,7 +119,7 @@ impl<N, F: Flag> Problem<N, F> {
             assert_eq!(cs.output_basis(), b);
         }
     }
-    pub fn view<'a>(&'a self, selector: &'a Selector) -> ProblemView<'a, N, F> {
+    pub(crate) fn view<'a>(&'a self, selector: &'a Selector) -> ProblemView<'a, N, F> {
         self.check();
         let ineqs = Select {
             selected: &self.ineqs,
@@ -139,6 +135,14 @@ impl<N, F: Flag> Problem<N, F> {
             cs,
             cs_subspace: selector.cs_subspace_constraints().collect(),
         }
+    }
+}
+
+fn format_count(count: usize, max: usize) -> String {
+    if count == max {
+        format!("{}", count)
+    } else {
+        format!("{}/{}", count, max)
     }
 }
 
@@ -158,13 +162,6 @@ where
             self.obj.basis,
             self.obj.basis.get().len()
         )?;
-        fn format_count(count: usize, max: usize) -> String {
-            if count == max {
-                format!("{}", count)
-            } else {
-                format!("{}/{}", count, max)
-            }
-        }
         writeln!(
             file,
             "* {} groups of linear constraints ({})",
@@ -273,7 +270,6 @@ where
                         v,
                         ineq.meta().equality,
                     )?;
-                    //                    write_coeff(&mut file, mat_num + 1, block_num, i, i, v)?;
                 }
             }
         }
@@ -401,9 +397,9 @@ type VecCsMode = ArrayVec<CSMode, 2>;
 
 /// Identifies a product-and-unlabel matrix with a symmetry reduction
 #[derive(Debug, Clone)]
-pub struct CauchySchwarzMatrix<F>(pub CSMode, pub MulAndUnlabel<F>);
+pub struct CauchySchwarzMatrix<F: Flag>(pub CSMode, pub MulAndUnlabel<F>);
 
-impl<F> Display for CauchySchwarzMatrix<F> {
+impl<F: Flag> Display for CauchySchwarzMatrix<F> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.0 {
             Simple => write!(f, "{}", self.1),
@@ -424,24 +420,24 @@ impl<F: Flag> CauchySchwarzMatrix<F> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Select<'a, A, B> {
+pub(crate) struct Select<'a, A, B> {
     selected: &'a A,
     selector: &'a B,
 }
 
 #[derive(Debug, Clone)]
-pub struct SelectIter<'a, A, B> {
+pub(crate) struct SelectIter<'a, A, B> {
     content: &'a Select<'a, A, B>,
     iter: std::ops::Range<usize>,
 }
 
 /// A reference to a `Problem` filtered by a `Selector`.
 #[derive(Debug, Clone)]
-pub struct ProblemView<'a, N, F> {
+pub struct ProblemView<'a, N, F: Flag> {
     pub obj: &'a QFlag<N, F>,
-    pub ineqs: IneqsSelect<'a, N, F>,
-    pub cs: CsSelect<'a, F>,
-    pub cs_subspace: Vec<(usize, &'a CsMat<f64>)>,
+    pub(crate) ineqs: IneqsSelect<'a, N, F>,
+    pub(crate) cs: CsSelect<'a, F>,
+    pub(crate) cs_subspace: Vec<(usize, &'a CsMat<f64>)>,
 }
 
 // Sub-selector types
@@ -450,7 +446,7 @@ type IneqsSelect<'a, N, F> = Select<'a, Vec<Ineq<N, F>>, Vec<Vec<usize>>>;
 type IneqSelect<'a, N, F> = Select<'a, Ineq<N, F>, Vec<usize>>;
 
 #[derive(Debug, Clone)]
-pub struct CsIter<'a, F> {
+pub struct CsIter<'a, F: Flag> {
     content: CsSelect<'a, F>,
     iter: std::ops::Range<usize>,
     next: Option<CauchySchwarzMatrix<F>>,
@@ -459,7 +455,7 @@ pub struct CsIter<'a, F> {
 type IneqsIter<'a, N, F> = SelectIter<'a, Vec<Ineq<N, F>>, Vec<Vec<usize>>>;
 type IneqIter<'a, N, F> = SelectIter<'a, Ineq<N, F>, Vec<usize>>;
 
-impl<'a, F> CsSelect<'a, F> {
+impl<'a, F: Flag> CsSelect<'a, F> {
     pub fn iter(&self) -> CsIter<'a, F> {
         CsIter {
             content: self.clone(),
@@ -478,7 +474,7 @@ impl<'a, F> CsSelect<'a, F> {
     }
 }
 
-impl<'a, N, F> Index<usize> for IneqSelect<'a, N, F> {
+impl<'a, N, F: Flag> Index<usize> for IneqSelect<'a, N, F> {
     type Output = IneqData<N>;
 
     fn index(&self, i: usize) -> &Self::Output {
@@ -486,7 +482,7 @@ impl<'a, N, F> Index<usize> for IneqSelect<'a, N, F> {
     }
 }
 
-impl<'a, N, F> IneqsSelect<'a, N, F> {
+impl<'a, N, F: Flag> IneqsSelect<'a, N, F> {
     pub fn iter(&'a self) -> IneqsIter<'a, N, F> {
         SelectIter {
             content: self,
@@ -512,7 +508,7 @@ impl<'a, N, F> IneqsSelect<'a, N, F> {
     }
 }
 
-impl<'a, N, F> IneqSelect<'a, N, F> {
+impl<'a, N, F: Flag> IneqSelect<'a, N, F> {
     pub fn iter(&'a self) -> IneqIter<'a, N, F> {
         SelectIter {
             content: self,
@@ -538,7 +534,7 @@ impl<'a, N, F> IneqSelect<'a, N, F> {
 }
 
 // Iterators
-impl<'a, F> Iterator for CsIter<'a, F> {
+impl<'a, F: Flag> Iterator for CsIter<'a, F> {
     type Item = CauchySchwarzMatrix<F>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -567,7 +563,7 @@ impl<'a, F> Iterator for CsIter<'a, F> {
     }
 }
 
-impl<'a, N, F> Iterator for IneqIter<'a, N, F> {
+impl<'a, N, F: Flag> Iterator for IneqIter<'a, N, F> {
     type Item = &'a IneqData<N>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -575,7 +571,7 @@ impl<'a, N, F> Iterator for IneqIter<'a, N, F> {
     }
 }
 
-impl<'a, N, F> Iterator for IneqsIter<'a, N, F> {
+impl<'a, N, F: Flag> Iterator for IneqsIter<'a, N, F> {
     type Item = IneqSelect<'a, N, F>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -592,7 +588,7 @@ impl<'a, N, F> Iterator for IneqsIter<'a, N, F> {
 type Id = (usize, CSMode);
 
 impl Selector {
-    pub fn new<N, F>(prob: &Problem<N, F>) -> Self
+    pub fn new<N, F: Flag>(prob: &Problem<N, F>) -> Self
     where
         F: Flag,
     {
@@ -852,10 +848,10 @@ impl Certificate<f64> {
     }
 }
 
-pub fn condense<N, F>(ineq: IneqSelect<'_, N, F>, coeff: &[N]) -> (QFlag<N, F>, N)
+pub(crate) fn condense<N, F>(ineq: IneqSelect<'_, N, F>, coeff: &[N]) -> (QFlag<N, F>, N)
 where
     N: Num + Clone + ScalarOperand + AddAssign,
-    F: Clone,
+    F: Flag,
 {
     assert_eq!(ineq.len(), coeff.len());
     assert!(!coeff.is_empty());
@@ -882,18 +878,18 @@ where
 
 fn hadamard<N>(dense: &Array2<N>, sprs: &CsMat<i64>) -> N
 where
-    N: Num + Clone + AddAssign + FromPrimitive,
+    N: Num + Clone + FromPrimitive,
 {
     let mut res = N::zero();
     for (&v, (i, j)) in sprs {
-        res += N::from_i64(v).unwrap() * dense[(i, j)].clone()
+        res = res + N::from_i64(v).unwrap() * dense[(i, j)].clone()
     }
     res
 }
 
 pub fn condense_cs<N, F>(cs: &CauchySchwarzMatrix<F>, cert: &Array2<N>) -> QFlag<N, F>
 where
-    N: Num + Clone + AddAssign + FromPrimitive,
+    N: Num + Clone + FromPrimitive,
     F: Flag,
 {
     let mut data = Vec::new();
@@ -914,7 +910,7 @@ where
 {
     let mut res = Vec::with_capacity(mat.ncols());
 
-    let cholesky0 = mat.cholesky(UPLO::Upper).unwrap();
+    let cholesky0 = Cholesky::cholesky(mat, UPLO::Upper).unwrap();
     // Fixme
 
     let cholesky = match cs.0 {

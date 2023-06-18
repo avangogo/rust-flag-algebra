@@ -464,14 +464,6 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn symflatmatrix_size_unit() {
-    //     for i in 0..4 {
-    //         let m = Sym::new(0,i);
-    //         assert_eq!(i, m.size())
-    //     }
-    // }
-
     #[test]
     fn symnonrefl() {
         assert_eq!(SymNonRefl::new(42, 0).0.len(), 0);
@@ -494,7 +486,6 @@ mod tests {
         for &x in m.0.iter() {
             assert_eq!(x, 2)
         }
-        //        assert_eq!(SymNonRefl::<bool>::invariant_size(), 1)
     }
 
     #[test]

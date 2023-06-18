@@ -1,9 +1,9 @@
 use crate::flag::SubClass;
-use crate::flags::{CGraph, Colored, Graph};
-use svg::node::element::{Circle, Line, SVG};
+use crate::flags::{CGraph, Colored, Digraph, Graph};
+use svg::node::element::{Circle, Line, Polygon, SVG};
 use svg::node::Node;
 
-/// Trait to draw flags in svg
+/// Draw flags in svg
 pub trait Draw: Sized {
     fn draw_with_parameters<C>(&self, color: C, type_size: usize) -> SVG
     where
@@ -32,7 +32,7 @@ where
     }
 }
 
-impl<F, A> Draw for Colored<F, A>
+impl<F, const N: u8> Draw for Colored<F, N>
 where
     F: Draw,
 {
@@ -91,6 +91,38 @@ fn line(i: usize, j: usize, n: usize) -> Line {
         .set("stroke-width", 4)
 }
 
+fn arrow(i: usize, j: usize, n: usize) -> Polygon {
+    let (x1, y1) = coordinates(i, n);
+    let (x2, y2) = coordinates(j, n);
+    let (dx, dy) = (x2 - x1, y2 - y1);
+    let dist = (dx * dx + dy * dy).sqrt();
+    let u = (dx / dist, dy / dist);
+    let pic = (x2 - 6. * u.0, y2 - 6. * u.1);
+    let mid = (x2 - 18. * u.0, y2 - 18. * u.1);
+    let t = (u.1 * 4., -u.0 * 4.);
+    let th = (u.1 * 1.5, -u.0 * 1.5);
+    Polygon::new().set(
+        "points",
+        format!(
+            "{},{} {},{} {},{} {},{} {},{} {},{} {},{}",
+            x1 + th.0,
+            y1 + th.1,
+            mid.0 + th.0,
+            mid.1 + th.1,
+            mid.0 + t.0,
+            mid.1 + t.1,
+            pic.0,
+            pic.1,
+            mid.0 - t.0,
+            mid.1 - t.1,
+            mid.0 - th.0,
+            mid.1 - th.1,
+            x1 - th.0,
+            y1 - th.1,
+        ),
+    )
+}
+
 fn color(c: usize) -> &'static str {
     ["black", "red", "blue"][c]
 }
@@ -106,7 +138,7 @@ fn add_vertex<N: Node>(node: &mut N, i: usize, n: usize, col: &'static str, in_t
     }
 }
 
-impl<E> Draw for CGraph<E> {
+impl<const N: u8> Draw for CGraph<N> {
     fn draw_with_parameters<C>(&self, mut col: C, type_size: usize) -> SVG
     where
         C: FnMut(usize) -> usize,
@@ -140,6 +172,25 @@ impl Draw for Graph {
                 if self.edge(u, v) {
                     res = res.add(line(u, v, n).set("stroke", "black"))
                 }
+            }
+        }
+        for v in 0..n {
+            add_vertex(&mut res, v, n, color(col(v)), v < type_size)
+        }
+        res
+    }
+}
+
+impl Draw for Digraph {
+    fn draw_with_parameters<C>(&self, mut col: C, type_size: usize) -> SVG
+    where
+        C: FnMut(usize) -> usize,
+    {
+        let mut res = frame();
+        let n = self.size();
+        for u in 0..n {
+            for v in self.out_nbrs(u) {
+                res = res.add(arrow(u, v, n).set("stroke", "black"));
             }
         }
         for v in 0..n {

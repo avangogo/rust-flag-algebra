@@ -1,8 +1,4 @@
-extern crate flag_algebra;
-
 use flag_algebra::flags::{Digraph, TriangleFree};
-use flag_algebra::operator::{Savable, Type};
-use flag_algebra::sdp::Problem;
 use flag_algebra::*;
 
 type F = SubClass<Digraph, TriangleFree>;
@@ -10,7 +6,7 @@ type N = f64;
 type V = QFlag<N, F>;
 
 // Parameters
-const FLAG_SIZE: usize = 5; // Size of the flags used //can be pushed to 6
+const FLAG_SIZE: usize = 5; // Size of the flags used // can be pushed to 6
 const C: f64 = 0.331; // Constant for which we prove the result
 const C1: f64 = C; // Constant for which we know it holds
 
@@ -21,8 +17,8 @@ pub fn main() {
     let b = Basis::new(FLAG_SIZE);
 
     // 1. Outderee is c.
-    let b21 = Basis::new(2).with_type(Type::from_flag(&Digraph::new(1, &[])));
-    let out_edge = b21.flag(&Digraph::new(2, &[(0, 1)]).into());
+    let b21 = Basis::new(2).with_type(Type::from_flag(&Digraph::new(1, [])));
+    let out_edge = b21.flag(&Digraph::new(2, [(0, 1)]).into());
 
     let outdegree_is_c = out_edge.at_least(C).multiply_and_unlabel(b).equality();
 
@@ -32,7 +28,7 @@ pub fn main() {
     let a = 0.88;
 
     // fork
-    let fork = flag(&Digraph::new(3, &[(0, 1), (0, 2)]).into());
+    let fork = flag(&Digraph::new(3, [(0, 1), (0, 2)]).into());
 
     let fork_ineq = {
         let x = 3. * C - 1.;
@@ -57,7 +53,6 @@ pub fn main() {
         assert_eq!(basis.size, basis.t.size + 1);
         basis.from_indicator(is_a_sigma_source)
     }
-
     // Recover the type of the basis in input (as a graph)
     fn get_graph_type(basis: Basis<F>) -> F {
         let graphs: Vec<F> = Basis::new(basis.t.size).get();
@@ -92,10 +87,9 @@ pub fn main() {
     //for the types sigma with a dominated vertex
     let mut f_rooted_ineqs = Vec::new();
     for n in 2..b.size {
-        let types = Basis::new(n).get();
-        for i in 0..types.len() {
-            if has_dominated_vertex(&types[i]) {
-                let basis = Basis::new(n + 1).with_type(Type::new(n, i));
+        for (id, type_flag) in Basis::new(n).get().iter().enumerate() {
+            if has_dominated_vertex(type_flag) {
+                let basis = Basis::new(n + 1).with_type(Type::new(n, id));
                 f_rooted_ineqs.push(f_inequality(basis));
             }
         }

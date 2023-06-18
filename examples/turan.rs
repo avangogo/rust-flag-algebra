@@ -1,5 +1,3 @@
-extern crate flag_algebra;
-
 use flag_algebra::*;
 use flags::Graph;
 use operator::Basis;
@@ -21,7 +19,7 @@ pub fn main() {
         ineqs: vec![
             total_sum_is_one(basis),
             flags_are_nonnegative(basis),
-            triangle.at_most(0),
+            triangle.at_most(0).multiply_and_unlabel(basis),
         ],
         // Use all relevant Cauchy-Schwarz inequalities.
         cs: basis.all_cs(),
