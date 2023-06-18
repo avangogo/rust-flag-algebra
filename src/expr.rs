@@ -1,14 +1,12 @@
 //! Expression of computations in the flag algebra for prettyprinting.
 
-extern crate num;
-
 use crate::operator::{Basis, Savable, Type};
 use std::collections::BTreeMap;
 use std::fmt::*;
 use std::rc::Rc;
 
 /// Expressions that represent a computation in flag algebras.
-pub enum Expr<N, F> {
+pub enum Expr<N, F: Flag> {
     Add(RcExpr<N, F>, RcExpr<N, F>),
     Mul(RcExpr<N, F>, RcExpr<N, F>),
     Neg(RcExpr<N, F>),
@@ -24,26 +22,49 @@ pub enum Expr<N, F> {
     Unknown,
 }
 
+// Straightforward trait implementations
+// (derive is too conservative when working with Rc or PhantomData,
+// follow https://github.com/rust-lang/rust/issues/26925)
+impl<N, F: Flag> Clone for Expr<N, F> {
+    fn clone(&self) -> Self {
+        match self {
+            Add(a, b) => Add(a.clone(), b.clone()),
+            Mul(a, b) => Mul(a.clone(), b.clone()),
+            Neg(a) => Neg(a.clone()),
+            Unlab(a) => Unlab(a.clone()),
+            Num(a) => Num(a.clone()),
+            Var(a) => Var(*a),
+            Named(a, b, c) => Named(a.clone(), b.clone(), *c),
+            Flag(a, b) => Flag(*a, *b),
+            FromFunction(a, b) => FromFunction(a.clone(), *b),
+            FromIndicator(a, b) => FromIndicator(*a, *b),
+            Unknown => Unknown,
+            Zero => Zero,
+            One => One,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
-pub enum VarRange<F> {
+pub enum VarRange<F: Flag> {
     InBasis(Basis<F>),
 }
 
 #[derive(Debug, Clone)]
-pub struct Names<N, F> {
+pub struct Names<N, F: Flag> {
     pub flags: BTreeMap<(usize, Basis<F>), String>,
     pub types: BTreeMap<Type<F>, String>,
     pub functions: Vec<(String, QFlag<N, F>)>,
     pub sets: Vec<(String, Basis<F>, Vec<F>)>,
 }
 
-impl<N, F> Default for Names<N, F> {
+impl<N, F: Flag> Default for Names<N, F> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<N, F> Names<N, F> {
+impl<N, F: Flag> Names<N, F> {
     pub fn new() -> Self {
         Self {
             flags: BTreeMap::new(),
@@ -103,7 +124,7 @@ impl<N, F> Names<N, F> {
 use Expr::*;
 use VarRange::*;
 
-impl<F> VarRange<F> {
+impl<F: Flag> VarRange<F> {
     fn eval<N>(&self, i: usize) -> Expr<N, F> {
         match self {
             InBasis(basis) => Flag(i, *basis),
@@ -118,7 +139,7 @@ impl<F> VarRange<F> {
 
 type RcExpr<N, F> = Rc<Expr<N, F>>;
 
-impl<N, F> Expr<N, F> {
+impl<N, F: Flag> Expr<N, F> {
     pub fn add(a: Self, b: Self) -> Self {
         Add(Rc::new(a), Rc::new(b))
     }
@@ -183,14 +204,14 @@ impl<N, F> Expr<N, F> {
     pub fn latex(&self, names: &mut Names<N, F>) -> String
     where
         N: Display,
-        F: Ord + Flag,
+        F: Ord,
     {
         self.simplify().latex0(names)
     }
     fn latex0(&self, names: &mut Names<N, F>) -> String
     where
         N: Display,
-        F: Ord + Flag,
+        F: Ord,
     {
         match self {
             Add(a, b) => {
@@ -233,7 +254,7 @@ impl<N, F> Expr<N, F> {
     }
 }
 
-fn latex_basis<N, F>(basis: &Basis<F>, names: &mut Names<N, F>) -> String {
+fn latex_basis<N, F: Flag>(basis: &Basis<F>, names: &mut Names<N, F>) -> String {
     if basis.t.is_empty() {
         format!("\\mathcal{{F}}_{{{}}}", basis.size)
     } else {
@@ -245,9 +266,9 @@ fn latex_basis<N, F>(basis: &Basis<F>, names: &mut Names<N, F>) -> String {
     }
 }
 
-struct Paren<'a, N, F>(&'a Expr<N, F>);
+struct Paren<'a, N, F: Flag>(&'a Expr<N, F>);
 
-impl<'a, N, F> Display for Paren<'a, N, F>
+impl<'a, N, F: Flag> Display for Paren<'a, N, F>
 where
     Expr<N, F>: Display,
 {
@@ -274,7 +295,7 @@ where
     }
 }
 
-impl<N, F> Display for Expr<N, F>
+impl<N, F: Flag> Display for Expr<N, F>
 where
     N: Display,
 {
@@ -303,6 +324,30 @@ where
     }
 }
 
+impl<N, F> Debug for Expr<N, F>
+where
+    F: Flag + Debug,
+    N: Debug,
+{
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        match self {
+            Add(a, b) => write!(f, "Add({:?}, {:?})", a, b),
+            Mul(a, b) => write!(f, "Mul({:?}, {:?})", a, b),
+            Named(a, b, c) => write!(f, "Named({:?}, {:?}, {:?})", a, b, c),
+            Flag(a, b) => write!(f, "Flag({:?}, {:?})", a, b),
+            Neg(a) => write!(f, "Neg({:?})", a),
+            Unlab(a) => write!(f, "Unlab({:?})", a),
+            Num(a) => write!(f, "Num({:?})", a),
+            Var(a) => write!(f, "Var({:?})", a),
+            FromFunction(_, b) => write!(f, "FromFunction(_, {:?})", b),
+            FromIndicator(_, b) => write!(f, "FromIndicator(_, {:?})", b),
+            Unknown => write!(f, "Unknown"),
+            Zero => write!(f, "Zero"),
+            One => write!(f, "One"),
+        }
+    }
+}
+
 use crate::Flag;
 /// Expression evaluation
 use crate::QFlag;
@@ -311,7 +356,7 @@ use num::FromPrimitive;
 use std::ops::Neg;
 
 #[derive(Clone, Debug)]
-enum Val<N, F> {
+enum Val<N, F: Flag> {
     Num(N),
     QFlag(QFlag<N, F>),
 }
@@ -383,7 +428,7 @@ where
 impl<N, F> Expr<N, F>
 where
     N: Clone,
-    F: Clone,
+    F: Flag,
 {
     pub fn substitute_option(&self, range_opt: &Option<VarRange<F>>, id: usize) -> Self {
         match range_opt {
@@ -430,7 +475,7 @@ where
     }
 }
 
-impl<N, F> Expr<N, F> {
+impl<N, F: Flag> Expr<N, F> {
     pub fn map<Fun, M>(&self, f: &Fun) -> Expr<M, F>
     where
         Fun: Fn(&N) -> M,
@@ -451,53 +496,6 @@ impl<N, F> Expr<N, F> {
             Num(n) => Num(Rc::new(f(n))),
             Zero => Zero,
             One => One,
-        }
-    }
-}
-
-// Straightforward trait implementations
-// (derive is too conservative when working with Rc or PhantomData,
-// follow https://github.com/rust-lang/rust/issues/26925)
-impl<N, F> Clone for Expr<N, F> {
-    fn clone(&self) -> Self {
-        match self {
-            Add(a, b) => Add(a.clone(), b.clone()),
-            Mul(a, b) => Mul(a.clone(), b.clone()),
-            Neg(a) => Neg(a.clone()),
-            Unlab(a) => Unlab(a.clone()),
-            Num(a) => Num(a.clone()),
-            Var(a) => Var(*a),
-            Named(a, b, c) => Named(a.clone(), b.clone(), *c),
-            Flag(a, b) => Flag(*a, *b),
-            FromFunction(a, b) => FromFunction(a.clone(), *b),
-            FromIndicator(a, b) => FromIndicator(*a, *b),
-            Unknown => Unknown,
-            Zero => Zero,
-            One => One,
-        }
-    }
-}
-
-impl<N, F> Debug for Expr<N, F>
-where
-    F: Debug,
-    N: Debug,
-{
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        match self {
-            Add(a, b) => write!(f, "Add({:?}, {:?})", a, b),
-            Mul(a, b) => write!(f, "Mul({:?}, {:?})", a, b),
-            Named(a, b, c) => write!(f, "Named({:?}, {:?}, {:?})", a, b, c),
-            Flag(a, b) => write!(f, "Flag({:?}, {:?})", a, b),
-            Neg(a) => write!(f, "Neg({:?})", a),
-            Unlab(a) => write!(f, "Unlab({:?})", a),
-            Num(a) => write!(f, "Num({:?})", a),
-            Var(a) => write!(f, "Var({:?})", a),
-            FromFunction(_, b) => write!(f, "FromFunction(_, {:?})", b),
-            FromIndicator(_, b) => write!(f, "FromIndicator(_, {:?})", b),
-            Unknown => write!(f, "Unknown"),
-            Zero => write!(f, "Zero"),
-            One => write!(f, "One"),
         }
     }
 }

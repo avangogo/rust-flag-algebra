@@ -1,5 +1,3 @@
-extern crate flag_algebra;
-
 use flag_algebra::*;
 use flags::Graph;
 use sdp::Problem;

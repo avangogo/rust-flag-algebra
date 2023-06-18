@@ -1,8 +1,4 @@
-extern crate flag_algebra;
-
 use flag_algebra::flags::{Digraph, TriangleFree};
-use flag_algebra::operator::{Savable, Type};
-use flag_algebra::sdp::Problem;
 use flag_algebra::*;
 
 type F = SubClass<Digraph, TriangleFree>;
@@ -57,7 +53,6 @@ pub fn main() {
         assert_eq!(basis.size, basis.t.size + 1);
         basis.from_indicator(is_a_sigma_source)
     }
-
     // Recover the type of the basis in input (as a graph)
     fn get_graph_type(basis: Basis<F>) -> F {
         let graphs: Vec<F> = Basis::new(basis.t.size).get();

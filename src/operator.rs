@@ -92,9 +92,8 @@ where
 
 /// Type (or root) of a flag.
 /// It is identified by its size and its id in the list of flags of that size.
-#[allow(clippy::derived_hash_with_manual_eq)]
-#[derive(Debug, Hash)]
-pub struct Type<F> {
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone)]
+pub struct Type<F: Flag> {
     /// Size of the type.
     pub size: usize,
     /// Index of the type in the list of unlabeled flags of this size.
@@ -103,7 +102,7 @@ pub struct Type<F> {
     phantom: PhantomData<F>,
 }
 
-impl<F> Type<F> {
+impl<F: Flag> Type<F> {
     /// Constructor for the type.
     pub fn new(size: usize, id: usize) -> Self {
         Self {
@@ -170,8 +169,8 @@ impl<F> Type<F> {
 /// For instance `Basis<Graph>` is the Rust type for a basis of graphs.
 ///
 /// `basis.get()` returns an ordered vector containing all corresponding flags.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
-pub struct Basis<F> {
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone)]
+pub struct Basis<F: Flag> {
     /// Number of vertices in the flags of the basis.
     pub size: usize,
     /// Type of the flags of the basis.
@@ -179,7 +178,7 @@ pub struct Basis<F> {
 }
 
 /// # Defining a Basis
-impl<F> Basis<F> {
+impl<F: Flag> Basis<F> {
     /// Constructor for a basis.
     fn make(size: usize, t: Type<F>) -> Self {
         assert!(t.size <= size);
@@ -233,7 +232,7 @@ impl<F> Basis<F> {
     }
 }
 
-impl<F> Display for Type<F> {
+impl<F: Flag> Display for Type<F> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         if *self == Type::empty() {
             write!(f, "Empty type")
@@ -243,7 +242,7 @@ impl<F> Display for Type<F> {
     }
 }
 
-impl<F> Display for Basis<F> {
+impl<F: Flag> Display for Basis<F> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         if self.t == Type::empty() {
             write!(f, "Flags of size {} without type", self.size)
@@ -296,8 +295,8 @@ impl<F: Flag> Savable<Vec<F>, F> for Basis<F> {
 /// .get() returns a vector of matrices M
 /// where M[i][j, k] is the number of ways to split
 /// i into j and k
-#[derive(Debug)]
-pub struct SplitCount<F> {
+#[derive(Debug, Clone)]
+pub struct SplitCount<F: Flag> {
     left_size: usize,
     right_size: usize,
     type_: Type<F>,
@@ -359,9 +358,9 @@ impl<F: Flag> Savable<Vec<CsMat<u32>>, F> for SplitCount<F> {
 
 //================ Subflag count
 
-/// .get() gives a matrix M where M[i,j] is the number of copies of i in j
-#[derive(Clone, Copy, Debug)]
-pub struct SubflagCount<F> {
+/// .get() gives a matrix M where M\[i,j\] is the number of copies of i in j
+#[derive(Clone, Debug)]
+pub struct SubflagCount<F: Flag> {
     k: usize,
     n: usize,
     type_: Type<F>,
@@ -414,13 +413,13 @@ impl<F: Flag> Savable<CsMat<u32>, F> for SubflagCount<F> {
 /// Let F be the flag indexed by id on basis basis
 /// this represents the unlabeling opearation that
 /// sends the type `fully_typed(F)` to the flag `F`
-#[derive(Debug)]
-pub struct Unlabeling<F> {
+#[derive(Debug, Clone)]
+pub struct Unlabeling<F: Flag> {
     pub flag: usize,
     pub basis: Basis<F>,
 }
 
-impl<F> Unlabeling<F> {
+impl<F: Flag> Unlabeling<F> {
     pub fn new(basis: Basis<F>, flag: usize) -> Self {
         Self { basis, flag }
     }
@@ -459,8 +458,8 @@ impl<F> Unlabeling<F> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Unlabel<F> {
+#[derive(Debug, Clone)]
+pub struct Unlabel<F: Flag> {
     pub unlabeling: Unlabeling<F>,
     pub size: usize,
 }
@@ -486,7 +485,7 @@ impl<F: Flag> Savable<(Vec<usize>, Vec<u32>), F> for Unlabel<F> {
     }
 }
 
-impl<F> Unlabel<F> {
+impl<F: Flag> Unlabel<F> {
     pub fn denom(&self) -> u32 {
         let new_type_size = self.unlabeling.basis.t.size;
         let old_type_size = self.unlabeling.basis.size;
@@ -508,13 +507,13 @@ impl<F> Unlabel<F> {
     }
 }
 
-#[derive(Debug)]
-pub struct MulAndUnlabel<F> {
+#[derive(Debug, Clone)]
+pub struct MulAndUnlabel<F: Flag> {
     pub split: SplitCount<F>,
     pub unlabeling: Unlabeling<F>,
 }
 
-impl<F> MulAndUnlabel<F> {
+impl<F: Flag> MulAndUnlabel<F> {
     pub fn invariant_classes(&self) -> InvariantClasses<F> {
         assert_eq!(self.split.left_size, self.split.right_size);
         let size = self.split.left_size;
@@ -528,7 +527,7 @@ impl<F> MulAndUnlabel<F> {
     }
 }
 
-impl<F> Display for MulAndUnlabel<F> {
+impl<F: Flag> Display for MulAndUnlabel<F> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(
             f,
@@ -574,9 +573,11 @@ impl<F: Flag> Savable<Vec<CsMat<i64>>, F> for MulAndUnlabel<F> {
         let pre = pre_image(n, &unlab_f);
         let mut res = Vec::new();
         for pre_i in &pre {
-            let mut res_i = CsMat::<u32>::zero(mul[0].shape());
+            let mut res_i: CsMat<u32> = CsMat::zero(mul[0].shape());
             for &j in pre_i {
-                res_i = &res_i + &(&mul[j] * unlab_c[j]); // can be optimized
+                let mut mul_j = mul[j].clone();
+                mul_j *= unlab_c[j]; //
+                res_i = &res_i + &mul_j; // can be optimized
             }
             res.push(res_i.map(|&v| v as i64))
         }
@@ -593,8 +594,8 @@ impl<F: Flag> Savable<Vec<CsMat<i64>>, F> for MulAndUnlabel<F> {
 }
 
 //
-#[derive(Clone, Copy, Debug)]
-pub struct InvariantClasses<F>(Unlabel<F>);
+#[derive(Clone, Debug)]
+pub struct InvariantClasses<F: Flag>(Unlabel<F>);
 
 impl<F: Flag> Savable<Vec<usize>, F> for InvariantClasses<F> {
     fn filename(&self) -> String {
@@ -615,7 +616,7 @@ impl<F: Flag> Savable<Vec<usize>, F> for InvariantClasses<F> {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct ReducedByInvariant<F>(MulAndUnlabel<F>);
+pub struct ReducedByInvariant<F: Flag>(MulAndUnlabel<F>);
 
 impl<F: Flag> Savable<(Vec<CsMat<i64>>, Vec<CsMat<i64>>), F> for ReducedByInvariant<F> {
     fn filename(&self) -> String {
@@ -641,83 +642,18 @@ impl<F: Flag> Savable<(Vec<CsMat<i64>>, Vec<CsMat<i64>>), F> for ReducedByInvari
     }
 }
 
-// Workaround to give Basis and Unlabeling the Clone and Copy traits
-// (derive(Clone) does not derive the right bound when working
+// Workaround to give Basis and Unlabeling the Copy trait
+// (derive(Copy) does not derive the right bound when working
 // with PhantomData)
-impl<F> Clone for Type<F> {
-    fn clone(&self) -> Self {
-        Self {
-            size: self.size,
-            id: self.id,
-            phantom: PhantomData,
-        }
-    }
-}
-impl<F> Clone for Basis<F> {
-    fn clone(&self) -> Self {
-        Self {
-            size: self.size,
-            t: self.t,
-        }
-    }
-}
-impl<F> Clone for Unlabeling<F> {
-    fn clone(&self) -> Self {
-        Self {
-            flag: self.flag,
-            basis: self.basis,
-        }
-    }
-}
-impl<F> Clone for SplitCount<F> {
-    fn clone(&self) -> Self {
-        Self {
-            left_size: self.left_size,
-            right_size: self.right_size,
-            type_: self.type_,
-        }
-    }
-}
-impl<F> Clone for MulAndUnlabel<F> {
-    fn clone(&self) -> Self {
-        Self {
-            split: self.split,
-            unlabeling: self.unlabeling,
-        }
-    }
-}
-
-impl<F> Ord for Type<F> {
-    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        (self.size, self.id).cmp(&(other.size, other.id))
-    }
-}
-
-impl<F> PartialOrd for Type<F> {
-    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl<F> PartialEq for Type<F> {
-    fn eq(&self, other: &Self) -> bool {
-        self.size == other.size && self.id == other.id
-    }
-}
-
-impl<F> Copy for Type<F> {}
-impl<F> Copy for Unlabeling<F> {}
-impl<F> Copy for Basis<F> {}
-impl<F> Copy for SplitCount<F> {}
-impl<F> Copy for MulAndUnlabel<F> {}
-impl<F> Eq for Type<F> {}
+impl<F: Flag> Copy for Type<F> {}
+impl<F: Flag> Copy for Unlabeling<F> {}
+impl<F: Flag> Copy for Basis<F> {}
+impl<F: Flag> Copy for SplitCount<F> {}
+impl<F: Flag> Copy for MulAndUnlabel<F> {}
 // =======================
 
 /// # Defining a quantum flags from a specified basis.
-impl<F> Basis<F>
-where
-    F: Flag,
-{
+impl<F: Flag> Basis<F> {
     /// Sum of all flags of the basis.
     /// This is an expression of the 1 of the flag algebra.
     /// ```

@@ -11,7 +11,7 @@ use std::ops::*;
 
 /// An element of a flag algebra.
 #[derive(Clone, Debug)]
-pub struct QFlag<N, F> {
+pub struct QFlag<N, F: Flag> {
     /// Basis of the space where the element lives. This corresponds to the size and type of the flags.
     pub basis: Basis<F>,
     /// The vector of the element in the corresponding basis is `(1/self.scale).self.data`.
@@ -123,7 +123,7 @@ where
     }
 }
 
-impl<N, F> Neg for QFlag<N, F>
+impl<N, F: Flag> Neg for QFlag<N, F>
 where
     N: Clone + Neg<Output = N>,
 {
@@ -142,7 +142,7 @@ where
 impl<'a, N, F> Neg for &'a QFlag<N, F>
 where
     N: Clone + Neg<Output = N>,
-    F: Clone,
+    F: Flag,
 {
     type Output = QFlag<N, F>;
 
@@ -196,7 +196,7 @@ where
     }
 }
 
-impl<N, F> Display for IneqMeta<N, F>
+impl<N, F: Flag> Display for IneqMeta<N, F>
 where
     N: Display,
 {
@@ -211,7 +211,7 @@ where
     }
 }
 
-impl<N, F> Display for Ineq<N, F>
+impl<N, F: Flag> Display for Ineq<N, F>
 where
     N: Display,
 {
@@ -394,7 +394,7 @@ where
     }
 }
 
-impl<N, F> QFlag<N, F> {
+impl<N, F: Flag> QFlag<N, F> {
     /// Return the same element with modified pretty-print expression
     pub fn with_expr(mut self, expr: Expr<N, F>) -> Self {
         self.expr = expr;
@@ -513,7 +513,7 @@ where
 //============
 #[derive(Clone, Debug)]
 /// Contains informations about a set of inequalities of a flag algebra.
-pub struct IneqMeta<N, F> {
+pub struct IneqMeta<N, F: Flag> {
     /// Basis in which the inequality is expressed.
     /// This correspond to the type and size of the flags.
     pub basis: Basis<F>,
@@ -529,7 +529,7 @@ pub struct IneqMeta<N, F> {
     scale: u64,
 }
 
-impl<N, F: Flag> IneqMeta<N, F> {
+impl<N: Clone, F: Flag> IneqMeta<N, F> {
     fn opposite(self) -> Self {
         Self {
             basis: self.basis,
@@ -544,22 +544,22 @@ impl<N, F: Flag> IneqMeta<N, F> {
         Expr::sub(self.flag_expr.clone(), self.bound_expr.clone())
     }
 
-    fn multiply(&self, rhs_basis: &Basis<F>, rhs_expr: Expr<N, F>) -> Self {
+    fn multiply(&self, rhs_basis: Basis<F>, rhs_expr: Expr<N, F>) -> Self {
         let forall = if let Expr::Var(_) = rhs_expr {
             match self.forall {
-                None => Some(VarRange::InBasis(*rhs_basis)),
+                None => Some(VarRange::InBasis(rhs_basis)),
                 Some(_) => unimplemented!(),
             }
         } else {
             self.forall.clone()
         };
         Self {
-            basis: self.basis * *rhs_basis,
+            basis: self.basis * rhs_basis,
             flag_expr: Expr::mul(self.one_sided_expr(), rhs_expr),
             bound_expr: Expr::Zero,
             equality: self.equality,
             forall,
-            scale: self.scale * SplitCount::from_input(&self.basis, rhs_basis).denom() as u64,
+            scale: self.scale * SplitCount::from_input(&self.basis, &rhs_basis).denom() as u64,
         }
     }
 
@@ -685,7 +685,7 @@ where
 /// A set of bounds on elements of a flag algebra.
 ///
 /// This correpond to a set of inequalities constructed in a similar way.
-pub struct Ineq<N, F> {
+pub struct Ineq<N, F: Flag> {
     /// Common information about the set of inequalities.
     pub meta: IneqMeta<N, F>,
     /// List of data of the inequalities in the set.
@@ -790,7 +790,7 @@ where
         //
         Self {
             data,
-            meta: self.meta.multiply(&b, Expr::Var(0)),
+            meta: self.meta.multiply(b, Expr::Var(0)),
         }
     }
     /// If self is "`f` ≥ `x`", return the set of inequalities "`〚f*g〛 ≥ x.〚g〛`",
@@ -821,7 +821,7 @@ where
         }
         Self {
             data,
-            meta: self.meta.multiply(&other, Expr::Var(0)).untype(),
+            meta: self.meta.multiply(other, Expr::Var(0)).untype(),
         }
     }
 }

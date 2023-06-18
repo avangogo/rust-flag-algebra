@@ -1,4 +1,3 @@
-use failure::Fail;
 use std::fmt::Display;
 use std::fs::File;
 use std::io;
@@ -8,6 +7,7 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::result::Result;
 use std::str::FromStr;
+use thiserror::Error;
 
 use log::*;
 
@@ -27,13 +27,13 @@ pub struct SdpaCoeff {
     pub val: f64,
 }
 
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum Error {
-    #[fail(display = "Error while parsing matrix coefficient: {}", _0)]
+    #[error("Error while parsing matrix coefficient: {0}")]
     ParseError(String),
-    #[fail(display = "{}", _0)]
-    Io(#[cause] io::Error),
-    #[fail(display = "Solver returned with code {}", _0)]
+    #[error("{0}")]
+    Io(#[from] io::Error),
+    #[error("Solver returned with code {0}")]
     SdpNotSolved(i32),
 }
 
@@ -48,12 +48,6 @@ impl From<ParseIntError> for Error {
 impl From<ParseFloatError> for Error {
     fn from(e: ParseFloatError) -> Self {
         ParseError(format!("{}", e))
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Self {
-        Io(e)
     }
 }
 

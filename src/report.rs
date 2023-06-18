@@ -281,7 +281,7 @@ impl Approx for f64 {
     }
 }
 
-fn round<N, F>(vec: &QFlag<N, F>) -> QFlag<N, F>
+fn round<N, F: Flag>(vec: &QFlag<N, F>) -> QFlag<N, F>
 where
     N: Approx + Zero + Clone,
 {

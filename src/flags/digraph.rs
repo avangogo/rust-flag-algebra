@@ -1,7 +1,7 @@
 //! Example of flags: directed graphs.
 use crate::combinatorics;
-use crate::common::*;
 use crate::flag::{Flag, SubClass, SubFlag};
+use crate::flags::common::*;
 use crate::iterators::{Functions, StreamingIterator};
 use canonical_form::Canonize;
 use std::fmt;

@@ -1,6 +1,6 @@
 use crate::combinatorics::*;
-use crate::common::*;
 use crate::flag::Flag;
+use crate::flags::common::*;
 use canonical_form::Canonize;
 use serde::de::DeserializeOwned;
 use serde::Serialize;

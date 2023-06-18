@@ -7,7 +7,7 @@ use sprs::CsMat;
 
 /// A higher level object to try several selectors on a problem
 #[derive(Debug, Clone)]
-pub struct FlagSolver<F> {
+pub struct FlagSolver<F: Flag> {
     pb: Problem<f64, F>,
     name: String,
     pub optimal_value: Option<f64>,

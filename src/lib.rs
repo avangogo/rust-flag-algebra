@@ -8,8 +8,6 @@
 //!```rust,no_run
 //! // Proving that in any graph, at least 1/4 of the triples
 //! // are triangles or independent sets.
-//!extern crate flag_algebra;
-//!
 //!use flag_algebra::*;
 //!use flag_algebra::flags::Graph;
 //!
@@ -54,21 +52,32 @@
 //! To use a kind combinatorial objects as flags (e.g. graphs), it suffices to
 //! implement the [Flag](trait.Flag.html) trait for the corresponding Rust datatype.
 //!
-//! Currently, [Flag](trait.Flag.html) is implemented for [Graphs](flags/struct.Graph.html),
-//! [Digraphs](flags/struct.Digraph.html) and [edge-colored graphs](flags/struct.CGraph.html)
+//! Currently, [Flag](trait.Flag.html) is implemented for [Graphs](struct@flags::Graph),
+//! [Digraphs](struct@flags::Digraph) and [edge-colored graphs](struct@flags::CGraph)
 //! with some fixed number of colors.
 //!
-//! Beside implementing directly [Flag](trait.Flag.html) for your own types, two mechanisms help
+//! Beside implementing directly [Flag] for your own types, two mechanisms help
 //! to define flag classes based on an existing flag class `F`.
-//! * The [Colored](flags/struct.Colored.html) structure for defining vertex-colored flags.
+//! * The [Colored](struct@flags::Colored) structure for defining vertex-colored flags.
 //! If `N` is an integer identifier, `Colored<F, N>` is the type for flags of type `F`
 //! where the vertices are further colored in `N` different colors.
 //! `Colored<F, N>` automatically implement `Flag` when `F` does.
-//! * The [Subclass](struct.SubClass.html) structure and
-//! the [SubFlag](trait.SubFlag.html) for classes that are subsets
+//! * The [SubClass] structure and
+//! the [SubFlag] for classes that are subsets
 //! of already defined classes.
 //! This is usefull for instance for computing in triangle-free graphs flag algebra
 //! without considering other graphs.
+//! See the documentation page of [SubFlag] for more details.
+//!
+//!# Expressing elements of a flag algebra
+//! See [Type], [Basis] and [QFlag].
+//!
+//! The `Type<F:Flag>` structure identifies a
+//! "type" σ in the sense of flag algebras (i.e. a completely labeled flag)
+//! is represented by an object.
+//! The `Basis<F:Flag>` structure corresponds to a couple (n, σ)
+//! and identifies the set of σ-flags of size n.
+//! The structure `QFlag`
 
 #![warn(
     missing_debug_implementations,
@@ -78,7 +87,7 @@
     unsafe_code,
     unstable_features,
     unused_import_braces,
-    unused_qualifications,
+//    unused_qualifications,
     unused_labels,
 //    unused_results
 )]
@@ -87,7 +96,6 @@ mod algebra;
 pub use crate::algebra::*;
 
 mod combinatorics;
-mod common;
 pub mod density;
 pub mod draw;
 pub mod flags;
@@ -124,7 +132,13 @@ pub fn init_default_log() {
         .set_target_level(LevelFilter::Off)
         .set_thread_level(LevelFilter::Off)
         .build();
-    TermLogger::init(LevelFilter::Info, config, TerminalMode::Mixed).unwrap();
+    TermLogger::init(
+        LevelFilter::Info,
+        config,
+        TerminalMode::Mixed,
+        ColorChoice::Auto,
+    )
+    .unwrap();
 }
 
 /// Initialize the logs to be outputted to the console with detailed information.
@@ -137,5 +151,11 @@ pub fn init_debug_log() {
         .set_target_level(LevelFilter::Off)
         .set_thread_level(LevelFilter::Off)
         .build();
-    TermLogger::init(LevelFilter::Trace, config, TerminalMode::Mixed).unwrap();
+    TermLogger::init(
+        LevelFilter::Trace,
+        config,
+        TerminalMode::Mixed,
+        ColorChoice::Auto,
+    )
+    .unwrap();
 }

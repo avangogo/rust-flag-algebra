@@ -1,9 +1,5 @@
-extern crate flag_algebra;
-
 use flag_algebra::*;
 use flags::Graph;
-use operator::Basis;
-use sdp::Problem;
 
 pub fn main() {
     // Work on the graphs of size 3.

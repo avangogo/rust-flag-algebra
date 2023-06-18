@@ -1,6 +1,7 @@
 //! Implementations of flags.
 
 mod cgraph;
+mod common;
 mod digraph;
 mod graph;
 mod model;
