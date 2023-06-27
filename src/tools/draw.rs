@@ -1,5 +1,5 @@
 use crate::flag::SubClass;
-use crate::flags::{CGraph, Colored, Graph, OrientedGraph};
+use crate::flags::{CGraph, Colored, DirectedGraph, Graph, OrientedGraph};
 use svg::node::element::{Circle, Line, Polygon, SVG};
 use svg::node::Node;
 
@@ -181,7 +181,7 @@ impl Draw for Graph {
     }
 }
 
-impl Draw for OrientedGraph {
+impl Draw for DirectedGraph {
     fn draw_with_parameters<C>(&self, mut col: C, type_size: usize) -> SVG
     where
         C: FnMut(usize) -> usize,
@@ -197,5 +197,14 @@ impl Draw for OrientedGraph {
             add_vertex(&mut res, v, n, color(col(v)), v < type_size)
         }
         res
+    }
+}
+
+impl Draw for OrientedGraph {
+    fn draw_with_parameters<C>(&self, col: C, type_size: usize) -> SVG
+    where
+        C: FnMut(usize) -> usize,
+    {
+        self.as_directed().draw_with_parameters(col, type_size)
     }
 }

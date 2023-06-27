@@ -48,11 +48,11 @@
 //!# Supported flags
 //! This library is generic.
 //! To use a kind combinatorial objects as flags (e.g. graphs), it suffices to
-//! implement the [Flag](trait.Flag.html) trait for the corresponding Rust datatype.
+//! implement the [Flag](trait@Flag) trait for the corresponding Rust datatype.
 //!
-//! Currently, [Flag](trait.Flag.html) is implemented for [Graphs](struct@flags::Graph),
-//! [Digraphs](struct@flags::Digraph) and [edge-colored graphs](struct@flags::CGraph)
-//! with some fixed number of colors.
+//! Currently, [Flag](trait@Flag) is implemented for [Graphs](struct@flags::Graph),
+//! [Oriented graphs](struct@flags::OrientedGraph), [Directed graphs](struct@flags::DirectedGraph)
+//! and [edge-colored graphs](struct@flags::CGraph) with some fixed number of colors.
 //!
 //! Beside implementing directly [Flag] for your own types, two mechanisms help
 //! to define flag classes based on an existing flag class `F`.

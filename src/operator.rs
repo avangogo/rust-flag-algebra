@@ -877,6 +877,9 @@ mod tests {
             126
         );
         //
+        assert_eq!(Basis::<DirectedGraph>::new(2).get().len(), 3);
+        assert_eq!(Basis::<DirectedGraph>::new(3).get().len(), 16);
+        //
         assert_eq!(
             Basis::<SubClass<OrientedGraph, TriangleFree>>::new(3)
                 .get()

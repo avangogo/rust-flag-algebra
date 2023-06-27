@@ -13,28 +13,26 @@ Flag algebras is a framework used to produce computer-assisted proofs of some in
 use flag_algebra::*;
 use flag_algebra::flags::Graph;
 
-pub fn main() {
-   // Work on the graphs of size 3.
-   let basis = Basis::new(3);
+// Work on the graphs of size 3.
+let basis = Basis::new(3);
 
-   // Define useful flags.
-   let k3 = flag(&Graph::new(3, &[(0, 1), (1, 2), (2, 0)])); // Triangle
-   let e3 = flag(&Graph::new(3, &[])); // Independent set of size 3
+// Define useful flags.
+let k3 = flag(&Graph::new(3, &[(0, 1), (1, 2), (2, 0)])); // Triangle
+let e3 = flag(&Graph::new(3, &[])); // Independent set of size 3
 
-   // Definition of the optimization problem.
-   let pb = Problem::<i64, _> {
-       // Constraints
-       ineqs: vec![total_sum_is_one(basis), flags_are_nonnegative(basis)],
-       // Use all relevant Cauchy-Schwarz inequalities.
-       cs: basis.all_cs(),
-       // Minimize density of triangle plus density of independent of size 3.
-       obj: k3 + e3,
-   };
+// Definition of the optimization problem.
+let pb = Problem::<i64, _> {
+    // Constraints
+   ineqs: vec![total_sum_is_one(basis), flags_are_nonnegative(basis)],
+    // Use all relevant Cauchy-Schwarz inequalities.
+    cs: basis.all_cs(),
+    // Minimize density of triangle plus density of independent of size 3.
+    obj: k3 + e3,
+};
 
-   // Write the correspondind SDP program in "goodman.sdpa".
-   // This program can then be solved by CSDP. The answer would be 0.25.
-   pb.write_sdpa("goodman").unwrap();
-}
+// Write the correspondind SDP program in "goodman.sdpa".
+// This program can then be solved by CSDP. The answer would be 0.25.
+pb.write_sdpa("goodman").unwrap();
 ```
 ## Features
 This library can currently do the following.
@@ -52,11 +50,11 @@ in (hopefully) human-readable format (provided that it has a reasonnable size).
 ## Supported flags
 This library is generic.
 To use a kind combinatorial objects as flags (e.g. graphs), it suffices to
-implement the [Flag](trait.Flag.html) trait for the corresponding Rust datatype.
+implement the [Flag](trait@Flag) trait for the corresponding Rust datatype.
 
-Currently, [Flag](trait.Flag.html) is implemented for [Graphs](struct@flags::Graph),
-[Digraphs](struct@flags::Digraph) and [edge-colored graphs](struct@flags::CGraph)
-with some fixed number of colors.
+Currently, [Flag](trait@Flag) is implemented for [Graphs](struct@flags::Graph),
+[Oriented graphs](struct@flags::OrientedGraph), [Directed graphs](struct@flags::DirectedGraph)
+and [edge-colored graphs](struct@flags::CGraph) with some fixed number of colors.
 
 Beside implementing directly [Flag] for your own types, two mechanisms help
 to define flag classes based on an existing flag class `F`.
