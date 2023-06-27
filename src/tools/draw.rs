@@ -1,5 +1,5 @@
 use crate::flag::SubClass;
-use crate::flags::{CGraph, Colored, Digraph, Graph};
+use crate::flags::{CGraph, Colored, Graph, OrientedGraph};
 use svg::node::element::{Circle, Line, Polygon, SVG};
 use svg::node::Node;
 
@@ -181,7 +181,7 @@ impl Draw for Graph {
     }
 }
 
-impl Draw for Digraph {
+impl Draw for OrientedGraph {
     fn draw_with_parameters<C>(&self, mut col: C, type_size: usize) -> SVG
     where
         C: FnMut(usize) -> usize,

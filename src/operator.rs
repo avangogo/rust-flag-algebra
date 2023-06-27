@@ -866,21 +866,31 @@ mod tests {
         assert_eq!(Basis::<Graph>::make(3, Type::new(1, 0)).get().len(), 6);
         assert_eq!(Basis::<Graph>::make(4, Type::new(2, 1)).get().len(), 20);
         //
-        assert_eq!(Basis::<Digraph>::new(3).get().len(), 7);
-        assert_eq!(Basis::<Digraph>::new(5).get().len(), 582);
-        assert_eq!(Basis::<Digraph>::make(3, Type::new(1, 0)).get().len(), 15);
-        assert_eq!(Basis::<Digraph>::make(4, Type::new(2, 0)).get().len(), 126);
+        assert_eq!(Basis::<OrientedGraph>::new(3).get().len(), 7);
+        assert_eq!(Basis::<OrientedGraph>::new(5).get().len(), 582);
+        assert_eq!(
+            Basis::<OrientedGraph>::make(3, Type::new(1, 0)).get().len(),
+            15
+        );
+        assert_eq!(
+            Basis::<OrientedGraph>::make(4, Type::new(2, 0)).get().len(),
+            126
+        );
         //
         assert_eq!(
-            Basis::<SubClass<Digraph, TriangleFree>>::new(3).get().len(),
+            Basis::<SubClass<OrientedGraph, TriangleFree>>::new(3)
+                .get()
+                .len(),
             6
         );
         assert_eq!(
-            Basis::<SubClass<Digraph, TriangleFree>>::new(5).get().len(),
+            Basis::<SubClass<OrientedGraph, TriangleFree>>::new(5)
+                .get()
+                .len(),
             317
         );
         assert_eq!(
-            Basis::<SubClass<Digraph, TriangleFree>>::make(3, Type::new(2, 1))
+            Basis::<SubClass<OrientedGraph, TriangleFree>>::make(3, Type::new(2, 1))
                 .get()
                 .len(),
             8
@@ -894,7 +904,7 @@ mod tests {
         let _ = SplitCount::<Graph>::make(2, 3, Type::empty()).get();
         let _ = SplitCount::<Graph>::make(2, 3, Type::new(1, 0)).get();
         //
-        let _ = SplitCount::<Digraph>::make(2, 3, Type::new(1, 0)).get();
+        let _ = SplitCount::<OrientedGraph>::make(2, 3, Type::new(1, 0)).get();
     }
     #[test]
     fn subflagcount() {

@@ -1,4 +1,4 @@
-//! `[Digraph]`s and their flag implementation.
+//! `[OrientedGraph]`s and their flag implementation.
 use crate::combinatorics;
 use crate::flag::{Flag, SubClass, SubFlag};
 use crate::flags::common::*;
@@ -39,14 +39,14 @@ use Arc::*;
 ///
 /// Every pair of vertices has at most one edge.
 /// The possible relations between two vertices is described by the type [`Arc`].
-pub struct Digraph {
+pub struct OrientedGraph {
     /// Number of vertices.
     size: usize,
     /// Flat matrix of arcs.
     edge: AntiSym<Arc>,
 }
 
-impl Digraph {
+impl OrientedGraph {
     /// Create an oriented graph with `n` vertices and arcs in `arcs`.
     ///
     /// # Panics
@@ -55,10 +55,10 @@ impl Digraph {
     /// * If some arc is provided twice
     /// * If both arcs `(u, v)` and `(v, u)` are provided
     /// ```
-    /// use flag_algebra::flags::Digraph;
+    /// use flag_algebra::flags::OrientedGraph;
     ///
     /// // Oriented path with 3 vertices `0 -> 1 -> 2`
-    /// let p3 = Digraph::new(3, [(0, 1), (1, 2)]);
+    /// let p3 = OrientedGraph::new(3, [(0, 1), (1, 2)]);
     /// ```
     pub fn new<I>(n: usize, arcs: I) -> Self
     where
@@ -80,8 +80,8 @@ impl Digraph {
     }
     /// Oriented graph with `n` vertices and no edge.
     /// ```
-    /// use flag_algebra::flags::Digraph;
-    /// assert_eq!(Digraph::empty(4), Digraph::new(4, []));
+    /// use flag_algebra::flags::OrientedGraph;
+    /// assert_eq!(OrientedGraph::empty(4), OrientedGraph::new(4, []));
     /// ```
     pub fn empty(n: usize) -> Self {
         Self {
@@ -95,8 +95,8 @@ impl Digraph {
     }
     /// Out-neigborhood of `v`.
     /// ```
-    /// use flag_algebra::flags::Digraph;
-    /// let p3 = Digraph::new(3, [(0,1), (1,2)]);
+    /// use flag_algebra::flags::OrientedGraph;
+    /// let p3 = OrientedGraph::new(3, [(0,1), (1,2)]);
     /// assert_eq!(p3.out_nbrs(1), vec![2]);
     /// ```
     pub fn out_nbrs(&self, v: usize) -> Vec<usize> {
@@ -110,8 +110,8 @@ impl Digraph {
     }
     /// In-neigborhood of `v`.
     /// ```
-    /// use flag_algebra::flags::Digraph;
-    /// let p3 = Digraph::new(3, [(0,1), (1,2)]);
+    /// use flag_algebra::flags::OrientedGraph;
+    /// let p3 = OrientedGraph::new(3, [(0,1), (1,2)]);
     /// assert_eq!(p3.in_nbrs(1), vec![0]);
     /// ```
     pub fn in_nbrs(&self, v: usize) -> Vec<usize> {
@@ -125,8 +125,8 @@ impl Digraph {
     }
     /// Oriented relation between `u` to `v`.
     /// ```
-    /// use flag_algebra::flags::{Digraph, Arc};
-    /// let p3 = Digraph::new(3, [(0,1), (1,2)]);
+    /// use flag_algebra::flags::{OrientedGraph, Arc};
+    /// let p3 = OrientedGraph::new(3, [(0,1), (1,2)]);
     /// assert_eq!(p3.arc(0, 1), Arc::Edge);
     /// assert_eq!(p3.arc(1, 0), Arc::BackEdge);
     /// assert_eq!(p3.arc(0, 2), Arc::None);
@@ -164,7 +164,7 @@ impl Digraph {
     }
 }
 
-impl fmt::Display for Digraph {
+impl fmt::Display for OrientedGraph {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "(V=[{}], E={{", self.size)?;
         for u in 0..self.size {
@@ -193,10 +193,13 @@ fn check_vertex(u: usize, graph_size: usize) {
 fn check_arc((u, v): (usize, usize), graph_size: usize) {
     check_vertex(u, graph_size);
     check_vertex(v, graph_size);
-    assert!(u != v, "Invalid arc ({u}, {v}): Digraph have no loop");
+    assert!(
+        u != v,
+        "Invalid arc ({u}, {v}): OrientedGraphs have no loop"
+    );
 }
 
-impl Canonize for Digraph {
+impl Canonize for OrientedGraph {
     fn size(&self) -> usize {
         self.size
     }
@@ -209,7 +212,7 @@ impl Canonize for Digraph {
     }
 }
 
-impl Flag for Digraph {
+impl Flag for OrientedGraph {
     fn induce(&self, p: &[usize]) -> Self {
         let k = p.len();
         let mut res = Self::empty(k);
@@ -221,7 +224,7 @@ impl Flag for Digraph {
         res
     }
 
-    const NAME: &'static str = "Digraph";
+    const NAME: &'static str = "OrientedGraph";
 
     fn size_zero_flags() -> Vec<Self> {
         vec![Self::empty(0)]
@@ -244,21 +247,21 @@ impl Flag for Digraph {
     }
 }
 
-/// Indicator for digraph without directed triangle.
+/// Indicator for oriented graph without directed triangle.
 ///
-/// Makes `SubClass<Digraph, TriangleFree>` usable as flags.
+/// Makes `SubClass<OrientedGraph, TriangleFree>` usable as flags.
 #[derive(Debug, Clone, Copy)]
 pub enum TriangleFree {}
 
-impl SubFlag<Digraph> for TriangleFree {
-    const SUBCLASS_NAME: &'static str = "Triangle-free digraph";
+impl SubFlag<OrientedGraph> for TriangleFree {
+    const SUBCLASS_NAME: &'static str = "Triangle-free oriented graph";
 
-    fn is_in_subclass(flag: &Digraph) -> bool {
+    fn is_in_subclass(flag: &OrientedGraph) -> bool {
         flag.is_triangle_free()
     }
 }
 
-impl<A> SubClass<Digraph, A> {
+impl<A> SubClass<OrientedGraph, A> {
     pub fn size(&self) -> usize {
         self.content.size()
     }

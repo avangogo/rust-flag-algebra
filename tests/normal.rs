@@ -59,19 +59,19 @@ pub fn identities() {
 pub fn mul_commutativity() {
     commute::<Graph>(Type::new(1, 0), 3, 2);
     commute::<Graph>(Type::empty(), 2, 3);
-    commute::<Digraph>(Type::new(1, 0), 3, 2);
+    commute::<OrientedGraph>(Type::new(1, 0), 3, 2);
 }
 
 #[test]
 pub fn mul_associativity() {
     assoc::<Graph>(Type::new(1, 0), 2, 2, 2);
     assoc::<Graph>(Type::empty(), 2, 1, 2);
-    assoc::<Digraph>(Type::new(1, 0), 2, 1, 2);
+    assoc::<OrientedGraph>(Type::new(1, 0), 2, 1, 2);
 }
 
 #[test]
 pub fn untype_transitivity() {
     transitive::<Graph>(Type::new(1, 0), 3, 4, 5);
     transitive::<Graph>(Type::empty(), 2, 3, 5);
-    transitive::<Digraph>(Type::new(1, 0), 3, 4, 5);
+    transitive::<OrientedGraph>(Type::new(1, 0), 3, 4, 5);
 }
