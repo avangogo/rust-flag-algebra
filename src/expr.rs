@@ -117,7 +117,7 @@ impl<N, F: Flag> Names<N, F> {
         F: Flag,
     {
         let name = format!("f_{}", self.functions.len() + 1);
-        self.functions.push((name.clone(), basis.from_coeff_rc(f)));
+        self.functions.push((name.clone(), basis.qflag_from_coeff_rc(f)));
         name
     }
 }
@@ -437,8 +437,8 @@ where
             },
             Named(e, _, _) => e.eval0(context),
             Flag(i, basis) => Val::QFlag(basis.flag_from_id(*i)),
-            FromIndicator(f, basis) => Val::QFlag(basis.from_indicator(*f)),
-            FromFunction(f, basis) => Val::QFlag(basis.from_coeff_rc(f.clone())),
+            FromIndicator(f, basis) => Val::QFlag(basis.qflag_from_indicator(*f)),
+            FromFunction(f, basis) => Val::QFlag(basis.qflag_from_coeff_rc(f.clone())),
             Zero => Val::Num(N::zero()),
             One => Val::Num(N::one()),
             Unknown => panic!("Cannot evaluate unknown"),
@@ -529,8 +529,8 @@ mod tests {
         type V = QFlag<i64, Graph>;
         let basis = Basis::new(4);
         let flag1: V = basis.flag_from_id(3);
-        let flag2: V = basis.from_coeff(|g, _| g.edges().count() as i64);
-        let flag3: V = basis.from_indicator(|g, _| g.connected());
+        let flag2: V = basis.qflag_from_coeff(|g, _| g.edges().count() as i64);
+        let flag3: V = basis.qflag_from_indicator(|g, _| g.connected());
         let result = flag1 + (flag2 * 3) - flag3;
         let result2 = result.expr.eval();
         assert_eq!(result, result2);
