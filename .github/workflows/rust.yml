@@ -1,23 +1,24 @@
 name: Build and test
 
 on:
-  - push:
+  push:
     branches: ["main"]
-  - pull_request
+  pull_request: {}
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
       - run: sudo apt install cmake gfortran
+      - run: cargo fmt --all -- --check
       - name: Build
         run: cargo build
       - name: Run tests
         run: cargo test
       - name: Lint
-        run: cargo clippy --all-
+        run: cargo clippy --all
