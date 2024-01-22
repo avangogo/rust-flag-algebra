@@ -117,7 +117,8 @@ impl<N, F: Flag> Names<N, F> {
         F: Flag,
     {
         let name = format!("f_{}", self.functions.len() + 1);
-        self.functions.push((name.clone(), basis.qflag_from_coeff_rc(f)));
+        self.functions
+            .push((name.clone(), basis.qflag_from_coeff_rc(f)));
         name
     }
 }

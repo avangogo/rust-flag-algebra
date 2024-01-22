@@ -659,9 +659,9 @@ impl Selector {
     pub fn cs_dim(&self, (i, mode): Id) -> usize {
         self.cs_subspace[i].dim(mode)
     }
-    pub fn remove_cs(&self, (i, mode): Id) -> Result<Self, ()> {
+    pub fn remove_cs(&self, (i, mode): Id) -> Result<Self, String> {
         match self.cs[i].iter().position(|&m| m == mode) {
-            None => Err(()),
+            None => Err(format!("No mode {mode:?} for index {i} to remove")),
             Some(j) => {
                 let mut res = self.clone();
                 let _ = res.cs[i].swap_remove(j);
@@ -678,14 +678,14 @@ impl Selector {
         }
         res
     }
-    pub fn restrict_cs(&self, (i, mode): Id, mat: CsMat<f64>) -> Result<Self, ()> {
+    pub fn restrict_cs(&self, (i, mode): Id, mat: CsMat<f64>) -> Result<Self, String> {
         if self.cs[i].iter().any(|&m| m == mode) {
             // If the id is valid
             let mut res = self.clone();
             res.cs_subspace[i].restrict(mode, mat);
             Ok(res)
         } else {
-            Err(())
+            Err(format!("No mode {mode:?} for index {i} found"))
         }
     }
 }

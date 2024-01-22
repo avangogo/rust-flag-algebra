@@ -59,7 +59,7 @@ where
                     Err(e) => panic!("Failed to run csdp {}", e),
                 }
             }
-            None => panic!("Not problem to solve"),
+            None => panic!("No problem to solve"),
         }
     }
     pub fn init(&mut self) {
@@ -71,7 +71,7 @@ where
             .select
             .refine_with_certificate(&self.load_certificate(), &self.protected)
     }
-    pub fn run(&mut self, select: Selector) -> Result<(), ()> {
+    pub fn run(&mut self, select: Selector) -> Result<(), String> {
         self.write_sdpa(select.clone());
         if let Ok(v) = self.run_csdp() {
             if match self.optimal_value {
@@ -86,10 +86,10 @@ where
                 return Ok(());
             } else {
                 trace!("Selector rejected");
-                return Err(());
+                return Err("Selector rejected".into());
             }
         };
-        Err(())
+        Err("run_csdp failed".into())
     }
     fn load_certificate(&self) -> Certificate<f64> {
         if let Some(ref select) = self.select_certificate_file {
