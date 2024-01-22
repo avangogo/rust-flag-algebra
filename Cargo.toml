@@ -33,4 +33,6 @@ thiserror = "1.0.56"
 const_format = "0.2.32"
 
 [dev-dependencies]
+approx = "0.5.1"
+tempfile = "3.9.0"
 criterion = "0.5.1"
