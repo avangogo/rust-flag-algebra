@@ -24,7 +24,7 @@ use std::path::PathBuf;
 
 use log::*;
 
-/// The optimisation problems over flags are translated into a
+/// The optimization problems over flags are translated into a
 /// sdp problem in the sdpa format.
 ///
 /// Shape of the matrices:
@@ -40,7 +40,7 @@ use log::*;
 pub struct Problem<N, F: Flag> {
     /// Set of contraint inequalities.
     pub ineqs: Vec<Ineq<N, F>>,
-    /// Set of Cauchy-Schwarz inequlities to be used.
+    /// Set of Cauchy-Schwarz inequalities to be used.
     pub cs: Vec<MulAndUnlabel<F>>,
     /// Vector to be optimized.
     pub obj: QFlag<N, F>,
@@ -72,7 +72,7 @@ where
     Ok(())
 }
 
-// Write a coefficient `value` on position (i ,i) for a ineqality,
+// Write a coefficient `value` on position (i ,i) for an inequality,
 // or `value` and `-value` on positions (2i, 2i), (2i+1, 2i+1) for an equality
 fn write_ineq_coeff<N>(
     file: &mut BufWriter<File>,
@@ -181,7 +181,7 @@ where
         )?;
         writeln!(
             file,
-            "* {} additionnal constraints on Cauchy-Schwarz matrices",
+            "* {} additional constraints on Cauchy-Schwarz matrices",
             self.cs_subspace.len(),
         )?;
         writeln!(file, "*")?;
@@ -731,7 +731,7 @@ impl Certificate<f64> {
         for line in buf {
             let l = line.unwrap().parse::<SdpaCoeff>().unwrap();
             tri_mat[l.mat - 1][l.block - 1].add_triplet(l.i - 1, l.j - 1, l.val);
-            // If the value is not on the diagonal, add the symetric coeff
+            // If the value is not on the diagonal, add the symmetric coeff
             if l.i != l.j {
                 tri_mat[l.mat - 1][l.block - 1].add_triplet(l.j - 1, l.i - 1, l.val);
             }

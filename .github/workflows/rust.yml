@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - run: sudo apt install cmake gfortran
+      - run: sudo apt install cmake gfortran coinor-csdp
       - run: cargo fmt --all -- --check
       - name: Build
         run: cargo build
