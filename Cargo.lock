@@ -381,7 +381,7 @@ checksum = "9f6d018fb95a0b59f854aed68ecd96ce2b80af7911b92b1fed3c4b1fa516b91b"
 
 [[package]]
 name = "flag-algebra"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "approx 0.5.1",
  "arrayvec",
