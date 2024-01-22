@@ -18,7 +18,7 @@ pub enum Expr<N, F: Flag> {
     Named(RcExpr<N, F>, Rc<String>, bool),
     Var(usize),
     Flag(usize, Basis<F>),
-    FromFunction(Rc<dyn Fn(&F, usize) -> N>, Basis<F>),
+    FromFunction(CoefficientFn<F, N>, Basis<F>),
     FromIndicator(fn(&F, usize) -> bool, Basis<F>),
     Unknown,
 }
@@ -58,6 +58,8 @@ pub struct Names<N, F: Flag> {
     pub functions: Vec<(String, QFlag<N, F>)>,
     pub sets: Vec<(String, Basis<F>, Vec<F>)>,
 }
+
+pub type CoefficientFn<F, N> = Rc<dyn Fn(&F, usize) -> N>;
 
 impl<N, F: Flag> Default for Names<N, F> {
     fn default() -> Self {
@@ -112,12 +114,13 @@ impl<N, F: Flag> Names<N, F> {
         self.sets.push((name.clone(), basis, set));
         name
     }
-    fn name_function(&mut self, f: Rc<dyn Fn(&F, usize) -> N>, basis: Basis<F>) -> String
+    fn name_function(&mut self, f: CoefficientFn<F, N>, basis: Basis<F>) -> String
     where
         F: Flag,
     {
         let name = format!("f_{}", self.functions.len() + 1);
-        self.functions.push((name.clone(), basis.from_coeff_rc(f)));
+        self.functions
+            .push((name.clone(), basis.qflag_from_coeff_rc(f)));
         name
     }
 }
@@ -437,8 +440,8 @@ where
             },
             Named(e, _, _) => e.eval0(context),
             Flag(i, basis) => Val::QFlag(basis.flag_from_id(*i)),
-            FromIndicator(f, basis) => Val::QFlag(basis.from_indicator(*f)),
-            FromFunction(f, basis) => Val::QFlag(basis.from_coeff_rc(f.clone())),
+            FromIndicator(f, basis) => Val::QFlag(basis.qflag_from_indicator(*f)),
+            FromFunction(f, basis) => Val::QFlag(basis.qflag_from_coeff_rc(f.clone())),
             Zero => Val::Num(N::zero()),
             One => Val::Num(N::one()),
             Unknown => panic!("Cannot evaluate unknown"),
@@ -529,8 +532,8 @@ mod tests {
         type V = QFlag<i64, Graph>;
         let basis = Basis::new(4);
         let flag1: V = basis.flag_from_id(3);
-        let flag2: V = basis.from_coeff(|g, _| g.edges().count() as i64);
-        let flag3: V = basis.from_indicator(|g, _| g.connected());
+        let flag2: V = basis.qflag_from_coeff(|g, _| g.edges().count() as i64);
+        let flag3: V = basis.qflag_from_indicator(|g, _| g.connected());
         let result = flag1 + (flag2 * 3) - flag3;
         let result2 = result.expr.eval();
         assert_eq!(result, result2);

@@ -51,7 +51,7 @@ pub fn main() {
     // Return the sum of sigma sources of the basis in input
     fn sum_of_sigma_sources(basis: Basis<F>) -> V {
         assert_eq!(basis.size, basis.t.size + 1);
-        basis.from_indicator(is_a_sigma_source)
+        basis.qflag_from_indicator(is_a_sigma_source)
     }
     // Recover the type of the basis in input (as a graph)
     fn get_graph_type(basis: Basis<F>) -> F {

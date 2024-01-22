@@ -3,6 +3,7 @@
 use crate::algebra::QFlag;
 use crate::combinatorics::*;
 use crate::density::*;
+use crate::expr::CoefficientFn;
 use crate::expr::Expr;
 use crate::flag::Flag;
 use log::*;
@@ -698,7 +699,7 @@ impl<F: Flag> Basis<F> {
             expr: Expr::Zero,
         }
     }
-    pub(crate) fn from_vec<N>(self, vec: Vec<N>) -> QFlag<N, F> {
+    pub(crate) fn qflag_from_vec<N>(self, vec: Vec<N>) -> QFlag<N, F> {
         assert_eq!(self.get().len(), vec.len());
         QFlag {
             basis: self,
@@ -718,7 +719,7 @@ impl<F: Flag> Basis<F> {
     ///
     /// // Sum of graphs of size 3 with an even number of edges
     /// let b = Basis::<Graph>::new(3);
-    /// let sum = b.from_indicator(|g, _| g.edges().count() % 2 == 0 );
+    /// let sum = b.qflag_from_indicator(|g, _| g.edges().count() % 2 == 0 );
     ///
     /// let e3: QFlag<f64, Graph> = flag(&Graph::new(3, &[]));
     /// let p3 = flag(&Graph::new(3, &[(0, 1), (1, 2)]));
@@ -728,9 +729,9 @@ impl<F: Flag> Basis<F> {
     /// /// where v has degree at least 1
     /// let t = Type::from_flag(&Graph::new(1, &[])); // Type for one vertex
     /// let basis = Basis::new(3).with_type(t);
-    /// let sum: QFlag<f64, Graph> = basis.from_indicator(|g, _| g.edge(0, 1) || g.edge(0, 2) );
+    /// let sum: QFlag<f64, Graph> = basis.qflag_from_indicator(|g, _| g.edge(0, 1) || g.edge(0, 2) );
     /// ```
-    pub fn from_indicator<N>(self, f: fn(&F, usize) -> bool) -> QFlag<N, F>
+    pub fn qflag_from_indicator<N>(self, f: fn(&F, usize) -> bool) -> QFlag<N, F>
     where
         N: One + Zero,
     {
@@ -760,18 +761,18 @@ impl<F: Flag> Basis<F> {
     ///
     /// // Sum of graphs of size 3 weighted by their number of edges
     /// let b = Basis::<Graph>::new(3);
-    /// let sum: QFlag<f64, Graph>  = b.from_coeff(|g, _| g.edges().count() as f64 );
+    /// let sum: QFlag<f64, Graph>  = b.qflag_from_coeff(|g, _| g.edges().count() as f64 );
     /// ```
 
-    pub fn from_coeff<N, M, P>(self, f: P) -> QFlag<N, F>
+    pub fn qflag_from_coeff<N, M, P>(self, f: P) -> QFlag<N, F>
     where
         P: Fn(&F, usize) -> M + 'static,
         M: Into<N>,
     {
-        let rc_f: Rc<dyn Fn(&F, usize) -> N> = Rc::new(move |a, b| f(a, b).into());
-        self.from_coeff_rc(rc_f)
+        let rc_f: CoefficientFn<F, N> = Rc::new(move |a, b| f(a, b).into());
+        self.qflag_from_coeff_rc(rc_f)
     }
-    pub(crate) fn from_coeff_rc<N>(&self, f: Rc<dyn Fn(&F, usize) -> N>) -> QFlag<N, F> {
+    pub(crate) fn qflag_from_coeff_rc<N>(&self, f: CoefficientFn<F, N>) -> QFlag<N, F> {
         let vec: Vec<_> = self.get().iter().map(|g| f(g, self.t.size)).collect();
         QFlag {
             basis: *self,

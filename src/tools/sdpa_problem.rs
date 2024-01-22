@@ -110,7 +110,7 @@ impl SdpaCertificate {
     pub fn write(&self, filename: &str) -> Result<(), io::Error> {
         let filename = PathBuf::from(filename);
         //let _ = filename.set_extension("cert.sdpa");
-        let mut w = BufWriter::new(File::create(&filename)?);
+        let mut w = BufWriter::new(File::create(filename)?);
         for v in &self.y {
             write!(w, "{} ", v)?;
         }
