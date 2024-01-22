@@ -102,8 +102,8 @@ impl SdpaProblem {
 // matrix 1: Z, matrix 2: X
 #[derive(Debug, Clone)]
 pub struct SdpaCertificate {
-    y: Vec<f64>,
-    coeffs: Vec<SdpaCoeff>,
+    pub y: Vec<f64>,
+    pub coeffs: Vec<SdpaCoeff>,
 }
 
 impl SdpaCertificate {
