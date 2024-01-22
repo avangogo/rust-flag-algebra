@@ -108,11 +108,11 @@ where
 
 /// A wrapper type for flags from a sub-class of flags.
 ///
-/// This structure is meant to be used with the [SubFlag](trait.SubFlag.html) trait.
+/// This structure is meant to be used with the [`SubFlag`](trait.SubFlag.html) trait.
 /// The second type parameter serves as an identifier for the subclass
 /// and should implement `SubFlag<F>`.
 ///
-/// See the [SubFlag](trait.SubFlag.html) page for an example.
+/// See the [`SubFlag`](trait.SubFlag.html) page for an example.
 pub struct SubClass<F, A> {
     /// Type of flag wrapped.
     pub content: F,
@@ -269,7 +269,7 @@ where
 
     fn superflags(&self) -> Vec<Self> {
         let mut res = Vec::new();
-        for flag in self.content.superflags().into_iter() {
+        for flag in self.content.superflags() {
             if A::is_in_subclass(&flag) {
                 res.push(flag.into())
             }

@@ -120,9 +120,9 @@ impl fmt::Display for Graph {
             for v in 0..u {
                 if self.edge[(u, v)] {
                     if self.size < 10 {
-                        write!(f, " {}{}", v, u)?
+                        write!(f, " {v}{u}")?
                     } else {
-                        write!(f, " {}-{}", v, u)?
+                        write!(f, " {v}-{u}")?
                     }
                 }
             }

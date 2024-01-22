@@ -33,7 +33,7 @@ use log::*;
 ///    A diagonal block of size i.len()
 ///
 /// For each cs:
-///    A block with the size od cs.input_matrix
+///    A block with the size od `cs.input_matrix`
 
 /// An optimization problem expressed in flags algebra.
 #[derive(Debug, Clone)]
@@ -140,9 +140,9 @@ impl<N, F: Flag> Problem<N, F> {
 
 fn format_count(count: usize, max: usize) -> String {
     if count == max {
-        format!("{}", count)
+        format!("{count}")
     } else {
-        format!("{}/{}", count, max)
+        format!("{count}/{max}")
     }
 }
 
@@ -188,7 +188,7 @@ where
         write!(file, "* Minimizing: {}", self.obj.expr)?;
         match self.obj.scale {
             1 => writeln!(file)?,
-            s => writeln!(file, " (scale {})", s)?,
+            s => writeln!(file, " (scale {s})")?,
         }
         writeln!(file, "* Under the constraints:")?;
         for ineqs in self.ineqs.iter() {
@@ -235,7 +235,7 @@ where
         // Line 4: vector ai
         // ai is the needed coefficient for the flag Fi
         for v in &self.obj.data {
-            write!(file, "{} ", v)?;
+            write!(file, "{v} ")?;
         }
         for _ in &self.cs_subspace {
             write!(file, "0 ")?;
@@ -278,7 +278,7 @@ where
         let block_offset = self.ineqs.len();
         for (block_num, line) in cs_mat.iter().enumerate() {
             for (mat_num, matrix) in line.iter().enumerate() {
-                for (&v, (i, j)) in matrix.iter() {
+                for (&v, (i, j)) in matrix {
                     if i <= j {
                         write_coeff(&mut file, mat_num + 1, block_num + block_offset, i, j, v)?;
                     }
@@ -288,7 +288,7 @@ where
         // Cs subspace constraints
         let mat_offset = self.obj.data.len();
         for (i_mat, (block_num, matrix)) in self.cs_subspace.iter().enumerate() {
-            for (&v, (i, j)) in matrix.iter() {
+            for (&v, (i, j)) in *matrix {
                 if i <= j {
                     let mat_num = mat_offset + i_mat + 1;
                     write_coeff(&mut file, mat_num, block_num + block_offset, i, j, v)?;
@@ -328,7 +328,7 @@ where
         initial_solution: Option<&str>,
         minimize_certificate: bool,
     ) -> Result<f64, Error> {
-        let filename = format!("{}.sdpa", name);
+        let filename = format!("{name}.sdpa");
         match if minimize_certificate {
             csdp_minimize_certificate(&filename, initial_solution)
         } else {
@@ -766,7 +766,7 @@ impl Certificate<f64> {
         let mut w = BufWriter::new(File::create(name)?);
         // The value of the vector y is on the first line
         for v in &self.y {
-            write!(w, "{} ", v)?;
+            write!(w, "{v} ")?;
         }
         writeln!(w)?;
         for (num_mat, matrix) in [&self.z, &self.x].iter().enumerate() {
@@ -802,7 +802,7 @@ impl Certificate<f64> {
         let mut res = 0.;
         // For each block of inequalities
         for (block, ineqs) in pb.ineqs.iter().enumerate() {
-            for (v, (i, j)) in self.x[block].iter() {
+            for (v, (i, j)) in &self.x[block] {
                 assert_eq!(i, j);
                 let bound: f64 = NumCast::from(ineqs.data[i].bound.clone()).unwrap();
                 res += v * bound;

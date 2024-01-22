@@ -422,7 +422,7 @@ pub struct Unlabeling<F: Flag> {
 
 impl<F: Flag> Unlabeling<F> {
     pub fn new(basis: Basis<F>, flag: usize) -> Self {
-        Self { basis, flag }
+        Self { flag, basis }
     }
     pub fn total(t: Type<F>) -> Self {
         Self::new(Basis::new(t.size), t.id)
@@ -629,7 +629,7 @@ impl<F: Flag> Savable<(Vec<CsMat<i64>>, Vec<CsMat<i64>>), F> for ReducedByInvari
         let mul_and_unlabel = self.0.get();
         let mut res_inv = Vec::with_capacity(mul_and_unlabel.len());
         let mut res_anti = Vec::with_capacity(mul_and_unlabel.len());
-        for m in mul_and_unlabel.into_iter() {
+        for m in mul_and_unlabel {
             let invariant = &(&invariant_mat.transpose_view() * &m) * &invariant_mat;
             let antiinvariant = if antiinvariant_mat.cols() == 0 {
                 CsMat::zero((0, 0)) // avoiding a small bug of sprs

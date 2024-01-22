@@ -8,11 +8,11 @@ use flags::Graph;
 fn make_goodman_problem() -> Problem<f64, Graph> {
     let basis = Basis::new(3);
 
-    return Problem {
+    Problem {
         ineqs: vec![total_sum_is_one(basis), flags_are_nonnegative(basis)],
         cs: basis.all_cs(),
         obj: flag(&Graph::clique(3)) + flag(&Graph::empty(3)),
-    };
+    }
 }
 
 #[test]
@@ -34,7 +34,7 @@ pub fn solve_and_read_certificate() {
     problem.write_sdpa(&file).unwrap();
     problem.run_csdp(&file, None, false).unwrap();
 
-    let certificate = SdpaCertificate::load(&CERTIFICATE_FILE).unwrap();
+    let certificate = SdpaCertificate::load(CERTIFICATE_FILE).unwrap();
 
     assert_relative_eq!(
         *certificate.y.as_slice(),
