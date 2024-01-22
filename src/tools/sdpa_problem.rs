@@ -34,15 +34,15 @@ impl SdpaProblem {
         writeln!(w, "{}", self.b.len())?;
         writeln!(w, "{}", self.block_sizes.len())?;
         for i in &self.block_sizes {
-            write!(w, "{} ", i)?;
+            write!(w, "{i} ")?;
         }
         writeln!(w)?;
         for x in &self.b {
-            write!(w, "{} ", x)?;
+            write!(w, "{x} ")?;
         }
         writeln!(w)?;
         for coeff in &self.coeffs {
-            writeln!(w, "{} ", coeff)?;
+            writeln!(w, "{coeff} ")?;
         }
         Ok(())
     }
@@ -102,8 +102,8 @@ impl SdpaProblem {
 // matrix 1: Z, matrix 2: X
 #[derive(Debug, Clone)]
 pub struct SdpaCertificate {
-    y: Vec<f64>,
-    coeffs: Vec<SdpaCoeff>,
+    pub y: Vec<f64>,
+    pub coeffs: Vec<SdpaCoeff>,
 }
 
 impl SdpaCertificate {
@@ -112,11 +112,11 @@ impl SdpaCertificate {
         //let _ = filename.set_extension("cert.sdpa");
         let mut w = BufWriter::new(File::create(filename)?);
         for v in &self.y {
-            write!(w, "{} ", v)?;
+            write!(w, "{v} ")?;
         }
         writeln!(w)?;
         for coeff in &self.coeffs {
-            writeln!(w, "{} ", coeff)?;
+            writeln!(w, "{coeff} ")?;
         }
         Ok(())
     }
@@ -203,7 +203,7 @@ pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error
             continue;
         };
         if line.starts_with("Iter") {
-            if !stream && Instant::now() - time_start > time_before_stream {
+            if !stream && time_start.elapsed() > time_before_stream {
                 stream = true;
                 info!(
                     "csdp is taking more than {}s, start streaming output",
@@ -235,9 +235,7 @@ pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error
                 return Ok(value);
             } else {
                 info!("{}", line);
-                if code > 10 {
-                    panic!("{:?} aborted with code {}", command, code)
-                };
+                assert!(code <= 10, "{command:?} aborted with code {code}");
                 return Err(Error::SdpNotSolved(code));
             }
         }
@@ -252,7 +250,7 @@ pub fn csdp_minimize_certificate(
     let val = csdp(filename, initial_solution)?;
     let problem = SdpaProblem::load(filename)?.to_certificate_minimization(val);
     let cert = SdpaCertificate::load(CERTIFICATE_FILE)?.to_certificate_minimization(&problem);
-    let filename_minimize = format!("{}.minimize", filename);
+    let filename_minimize = format!("{filename}.minimize");
     problem.write(&filename_minimize)?;
     cert.write(CERTIFICATE_MINIMIZE_FILE)?;
     info!("Try to minimize certificate");

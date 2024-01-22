@@ -138,6 +138,7 @@ impl<A> FlatMatrix for Sym<A> {
         0..n
     }
     #[inline]
+    #[allow(clippy::range_plus_one)]
     fn halfline_iter(v: usize) -> Range<usize> {
         0..(v + 1)
     }
@@ -483,7 +484,7 @@ mod tests {
                 }
             }
         }
-        for &x in m.0.iter() {
+        for &x in &m.0 {
             assert_eq!(x, 2)
         }
     }
@@ -510,7 +511,7 @@ mod tests {
                 }
             }
         }
-        for &x in m.0.iter() {
+        for &x in &m.0 {
             assert!(x != 0)
         }
     }

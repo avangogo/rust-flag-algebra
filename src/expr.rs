@@ -99,7 +99,7 @@ impl<N, F: Flag> Names<N, F> {
                 if i == 0 {
                     "\\sigma".to_string()
                 } else {
-                    format!("\\sigma_{}", i)
+                    format!("\\sigma_{i}")
                 }
             })
             .clone()
@@ -253,11 +253,11 @@ impl<N, F: Flag> Expr<N, F> {
             ),
             Zero => "0".into(),
             One => "1".into(),
-            Num(s) => format!("{}", s),
+            Num(s) => format!("{s}"),
             Var(_) => "H".into(),
             Named(e, name, latex) => {
                 if *latex {
-                    format!("\\textrm{{{}}}", name)
+                    format!("\\textrm{{{name}}}")
                 } else {
                     e.latex0(names)
                 }
@@ -329,17 +329,17 @@ where
                 if let Neg(b1) = &*b {
                     write!(f, "{} - {}", a, Paren(b1))
                 } else {
-                    write!(f, "{} + {}", a, b)
+                    write!(f, "{a} + {b}")
                 }
             }
             Mul(a, b) => write!(f, "{}*{}", Paren(&a), Paren(&b)),
             Neg(a) => write!(f, "-{}", Paren(&a)),
-            Unlab(a) => write!(f, "[|{}|]", a),
+            Unlab(a) => write!(f, "[|{a}|]"),
             Zero => write!(f, "0"),
             One => write!(f, "1"),
-            Num(s) => write!(f, "{}", s),
+            Num(s) => write!(f, "{s}"),
             Var(_) => write!(f, "x"),
-            Named(_, name, _) => write!(f, "{}", name),
+            Named(_, name, _) => write!(f, "{name}"),
             Flag(i, basis) => write!(f, "flag({}:{})", i, basis.print_concise()),
             FromFunction(_, _) => write!(f, "Σ f(F)F"),
             FromIndicator(_, _) => write!(f, "Σ F"),
@@ -355,16 +355,16 @@ where
 {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self {
-            Add(a, b) => write!(f, "Add({:?}, {:?})", a, b),
-            Mul(a, b) => write!(f, "Mul({:?}, {:?})", a, b),
-            Named(a, b, c) => write!(f, "Named({:?}, {:?}, {:?})", a, b, c),
-            Flag(a, b) => write!(f, "Flag({:?}, {:?})", a, b),
-            Neg(a) => write!(f, "Neg({:?})", a),
-            Unlab(a) => write!(f, "Unlab({:?})", a),
-            Num(a) => write!(f, "Num({:?})", a),
-            Var(a) => write!(f, "Var({:?})", a),
-            FromFunction(_, b) => write!(f, "FromFunction(_, {:?})", b),
-            FromIndicator(_, b) => write!(f, "FromIndicator(_, {:?})", b),
+            Add(a, b) => write!(f, "Add({a:?}, {b:?})"),
+            Mul(a, b) => write!(f, "Mul({a:?}, {b:?})"),
+            Named(a, b, c) => write!(f, "Named({a:?}, {b:?}, {c:?})"),
+            Flag(a, b) => write!(f, "Flag({a:?}, {b:?})"),
+            Neg(a) => write!(f, "Neg({a:?})"),
+            Unlab(a) => write!(f, "Unlab({a:?})"),
+            Num(a) => write!(f, "Num({a:?})"),
+            Var(a) => write!(f, "Var({a:?})"),
+            FromFunction(_, b) => write!(f, "FromFunction(_, {b:?})"),
+            FromIndicator(_, b) => write!(f, "FromIndicator(_, {b:?})"),
             Unknown => write!(f, "Unknown"),
             Zero => write!(f, "Zero"),
             One => write!(f, "One"),

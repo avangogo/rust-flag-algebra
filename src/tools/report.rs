@@ -29,11 +29,11 @@ pub trait Html {
         let mut filename = PathBuf::from(name);
         let _ = filename.set_extension("html");
         let mut file = BufWriter::new(File::create(&filename)?);
-        writeln!(file, "<!DOCTYPE html><html><head><title>{}</title>", name)?;
+        writeln!(file, "<!DOCTYPE html><html><head><title>{name}</title>")?;
         if Self::LATEX {
-            writeln!(file, "{}", MATHJAX)?;
+            writeln!(file, "{MATHJAX}")?;
         }
-        writeln!(file, "<style>{}</style></head><body>", CSS)?;
+        writeln!(file, "<style>{CSS}</style></head><body>")?;
         self.print_html(&mut file)?;
         writeln!(file, "</body>")
     }
@@ -130,7 +130,7 @@ where
                 "<span>{}</span>",
                 x.draw_with_parameters(|_| 0, type_size)
             )?;
-            writeln!(w, "<span>{}</span></div>", label)?;
+            writeln!(w, "<span>{label}</span></div>")?;
         }
     }
     writeln!(w, "</div>")
@@ -216,11 +216,11 @@ where
     fn print_html<W: Write>(&self, w: &mut W) -> Result<()> {
         // Inlined defintions
         let mut inline_names = Vec::new();
-        for (t, name) in self.types.iter() {
+        for (t, name) in &self.types {
             let svg = Basis::<F>::new(t.size).get()[t.id].draw_typed(t.size);
             inline_names.push((name, svg))
         }
-        for ((i, basis), name) in self.flags.iter() {
+        for ((i, basis), name) in &self.flags {
             let svg = basis.get()[*i].draw_typed(basis.t.size);
             inline_names.push((name, svg))
         }
@@ -237,7 +237,7 @@ where
             .iter()
             .map(|(name, _, _)| name)
             .chain(self.functions.iter().map(|(name, _)| name))
-            .map(|s| format!("${}$", s))
+            .map(|s| format!("${s}$"))
             .collect();
         if !other_names.is_empty() {
             writeln!(
@@ -247,15 +247,15 @@ where
             )?;
             // Detailed content
             for (name, basis, flags) in &self.sets {
-                writeln!(w, "<p>${}$ contains the following flags:</p>", name)?;
+                writeln!(w, "<p>${name}$ contains the following flags:</p>")?;
                 writeln!(w, "<div class=\"flags\">")?;
-                for flag in flags.iter() {
+                for flag in flags {
                     writeln!(w, "{}", flag.draw_typed(basis.t.size))?;
                 }
                 writeln!(w, "</div>")?;
             }
             for (name, qflag) in &self.functions {
-                writeln!(w, "<p>${}$ takes the following values:</p>", name)?;
+                writeln!(w, "<p>${name}$ takes the following values:</p>")?;
                 qflag.print_html(w)?;
             }
 
@@ -296,12 +296,11 @@ fn header<W: Write>(w: &mut W, title: &str) -> Result<()> {
         w,
         "<!DOCTYPE html><html><head>
 <meta charset=\"UTF-8\">
-<title>{}</title>
-{}
+<title>{title}</title>
+{MATHJAX}
 <style>
-{}
+{CSS}
 </style></head><body>",
-        title, MATHJAX, CSS,
     )
 }
 
@@ -363,7 +362,7 @@ where
             .collect();
         let (lhs, bound) = condense(ineqs, &coeff);
         round(&lhs).print_html(&mut w)?;
-        writeln!(w, "\n is at least {}.</details>", bound)?;
+        writeln!(w, "\n is at least {bound}.</details>")?;
         writeln!(w, "</div>")?;
     }
 
@@ -371,7 +370,7 @@ where
 
     for (block, cs) in pb.cs.iter().enumerate() {
         writeln!(w, "<div class=\"inequality\">")?;
-        writeln!(w, "<h4>{}</h4><p>", cs)?;
+        writeln!(w, "<h4>{cs}</h4><p>")?;
         svg::write(
             &mut w,
             &cs.1.unlabeling.basis.get()[cs.1.unlabeling.flag].draw(),
@@ -390,7 +389,7 @@ where
         writeln!(w, "<details><summary>Eigenvectors</summary>")?;
         for (lambda, vect) in &eigenvectors_qflags(&cs, &a) {
             if !lambda.is_negligible() {
-                writeln!(w, "<h>λ = {}</h><p>", lambda)?;
+                writeln!(w, "<h>λ = {lambda}</h><p>")?;
                 round(vect).print_html(&mut w)?;
                 writeln!(w, "</p>")?;
             }
@@ -411,7 +410,7 @@ fn write_csmatrix<W: Write, N: Display>(w: &mut W, mat: &CsMat<N>) -> Result<()>
         writeln!(w, "<mtr>")?;
         for j in 0..mat.cols() {
             if let Some(x) = mat.get(i, j) {
-                writeln!(w, "<mtd>{}</mtd>", x)?;
+                writeln!(w, "<mtd>{x}</mtd>")?;
             } else {
                 writeln!(w, "<mtd></mtd>")?;
             }
@@ -425,7 +424,7 @@ fn write_diag_csmatrix<W: Write, N: Display>(w: &mut W, mat: &CsMat<N>) -> Resul
     writeln!(w, "<math><mfenced><mtable><mtr>")?;
     for i in 0..mat.rows() {
         if let Some(x) = mat.get(i, i) {
-            writeln!(w, "<mtd>{}</mtd>", x)?;
+            writeln!(w, "<mtd>{x}</mtd>")?;
         } else {
             writeln!(w, "<mtd>0</mtd>")?;
         }
@@ -449,7 +448,7 @@ fn write_array1<W: Write, N: Display>(w: &mut W, mat: &Array1<N>) -> Result<()> 
     writeln!(w, "<math><mfenced><mtable>")?;
     writeln!(w, "<mtr>")?;
     for x in mat {
-        writeln!(w, "<mtd>{}</mtd>", x)?;
+        writeln!(w, "<mtd>{x}</mtd>")?;
     }
     writeln!(w, "</mtr>")?;
     writeln!(w, "</mtable></mfenced></math>")
@@ -477,9 +476,9 @@ where
             svg::save(&path, &flag.draw_typed(qflag.basis.t.size)).unwrap();
             let x = val.clone() / scale.clone();
             if x.is_one() {
-                print!(" + \\flag{{{}}}", filename)
+                print!(" + \\flag{{{filename}}}")
             } else {
-                print!(" + {}\\cdot\\flag{{{}}}", val, filename)
+                print!(" + {val}\\cdot\\flag{{{filename}}}")
             };
             assert!(path.pop());
         }

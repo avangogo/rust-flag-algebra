@@ -228,7 +228,7 @@ where
     assert_eq!(lhs.len(), matrix.rows());
     assert_eq!(rhs.len(), matrix.cols());
     let mut res = N::zero();
-    for (v, (i, j)) in matrix.iter() {
+    for (v, (i, j)) in matrix {
         res = res + (N::from_u32(*v).unwrap() * lhs[i].clone() * rhs[j].clone());
     }
     res
@@ -240,7 +240,7 @@ where
 {
     assert_eq!(vec.len(), matrix.cols());
     let mut res: Array1<N> = Array1::zeros(matrix.rows());
-    for (&v, (i, j)) in matrix.iter() {
+    for (&v, (i, j)) in matrix {
         res[i] = res[i].clone() + N::from_u32(v).unwrap() * vec[j].clone();
     }
     res
@@ -584,7 +584,7 @@ impl<N: Clone, F: Flag> IneqMeta<N, F> {
             if let Some(ref range) = self.forall {
                 range.latex(names)
             } else {
-                "".into()
+                String::new()
             },
             self.flag_expr.latex(names),
             if self.equality { "=" } else { "\\geq" },
@@ -671,7 +671,7 @@ where
                     flags[j].append(i, val.clone())
                 }
             }
-            for flag in flags.into_iter() {
+            for flag in flags {
                 let ineq_data = Self {
                     flag,
                     bound: N::zero(),

@@ -29,13 +29,13 @@ use Error::*;
 
 impl From<ParseIntError> for Error {
     fn from(e: ParseIntError) -> Self {
-        ParseError(format!("{}", e))
+        ParseError(format!("{e}"))
     }
 }
 
 impl From<ParseFloatError> for Error {
     fn from(e: ParseFloatError) -> Self {
-        ParseError(format!("{}", e))
+        ParseError(format!("{e}"))
     }
 }
 

@@ -56,7 +56,7 @@ where
                 match self.pb.run_csdp(&self.name, None, false) {
                     Ok(v) => Ok(v),
                     Err(crate::sdpa::Error::SdpNotSolved(_)) => Err(()),
-                    Err(e) => panic!("Failed to run csdp {}", e),
+                    Err(e) => panic!("Failed to run csdp {e}"),
                 }
             }
             None => panic!("No problem to solve"),
@@ -107,7 +107,7 @@ where
             .refine_with_certificate(&self.load_certificate(), &self.protected);
         self.run(new_select).expect("Certificate too simplified")
     }
-    /// Try to remove each cauchy_schwarz to see if they are useful
+    /// Try to remove each `cauchy_schwarz` to see if they are useful
     pub fn cs_elim(&mut self) {
         info!("Try to remove Cauchy-Schwarz");
         for &i in self.select.cs_vec().iter().rev() {
@@ -120,7 +120,7 @@ where
     }
     pub fn thin_cs_elim(&mut self) {
         info!("Try to refine Cauchy-Schwarz");
-        for &id in self.select.cs_vec().iter() {
+        for &id in &self.select.cs_vec() {
             let dim = self.select.cs_dim(id);
             for i in 0..dim {
                 let mut mat = CsMat::zero((dim, dim));

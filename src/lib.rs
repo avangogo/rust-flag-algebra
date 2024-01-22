@@ -60,15 +60,15 @@
 //! If `N` is an integer identifier, `Colored<F, N>` is the type for flags of type `F`
 //! where the vertices are further colored in `N` different colors.
 //! `Colored<F, N>` automatically implement `Flag` when `F` does.
-//! * The [SubClass] structure and
-//! the [SubFlag] for classes that are subsets
+//! * The [`SubClass`] structure and
+//! the [`SubFlag`] for classes that are subsets
 //! of already defined classes.
 //! This is usefull for instance for computing in triangle-free graphs flag algebra
 //! without considering other graphs.
-//! See the documentation page of [SubFlag] for more details.
+//! See the documentation page of [`SubFlag`] for more details.
 //!
 //!# Expressing elements of a flag algebra
-//! See [Type], [Basis] and [QFlag].
+//! See [Type], [Basis] and [`QFlag`].
 //!
 //! The `Type<F:Flag>` structure identifies a
 //! "type" σ in the sense of flag algebras (i.e. a completely labeled flag)

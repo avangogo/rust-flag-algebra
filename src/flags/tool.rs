@@ -53,7 +53,7 @@ where
     }
     fn superflags(&self) -> Vec<Self> {
         let mut res = Vec::new();
-        for flag in self.content.superflags().into_iter() {
+        for flag in self.content.superflags() {
             for c in 0..N {
                 let mut color = self.color.clone();
                 color.push(c);

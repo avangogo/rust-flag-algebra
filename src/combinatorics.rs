@@ -69,7 +69,7 @@ pub fn invert(t: &[usize]) -> Vec<usize> {
 pub fn permutation_of_injection(n: usize, t: &[usize]) -> Vec<usize> {
     let mut res = t.to_vec();
     let mut unassigned = vec![true; n];
-    for &v in t.iter() {
+    for &v in t {
         unassigned[v] = false;
     }
     for (i, &b) in unassigned.iter().enumerate() {

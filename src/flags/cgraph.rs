@@ -72,7 +72,7 @@ impl<const K: u8> fmt::Display for CGraph<K> {
             for v in 0..u {
                 let uv = self.edge[(u, v)];
                 if uv > 0 {
-                    write!(f, " {}{}{}:{}", v, sep, u, uv)?
+                    write!(f, " {v}{sep}{u}:{uv}")?
                 }
             }
         }
