@@ -698,7 +698,7 @@ impl<F: Flag> Basis<F> {
             expr: Expr::Zero,
         }
     }
-    pub(crate) fn from_vec<N>(self, vec: Vec<N>) -> QFlag<N, F> {
+    pub(crate) fn qflag_from_vec<N>(self, vec: Vec<N>) -> QFlag<N, F> {
         assert_eq!(self.get().len(), vec.len());
         QFlag {
             basis: self,

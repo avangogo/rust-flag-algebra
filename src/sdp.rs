@@ -821,7 +821,7 @@ impl Certificate<f64> {
     where
         F: Flag,
     {
-        b.from_vec(
+        b.qflag_from_vec(
             self.y
                 .iter()
                 .map(|x| if x.abs() < threshold { 0. } else { *x })
