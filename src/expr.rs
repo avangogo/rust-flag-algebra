@@ -18,7 +18,7 @@ pub enum Expr<N, F: Flag> {
     Named(RcExpr<N, F>, Rc<String>, bool),
     Var(usize),
     Flag(usize, Basis<F>),
-    FromFunction(Rc<dyn Fn(&F, usize) -> N>, Basis<F>),
+    FromFunction(CoefficientFn<F, N>, Basis<F>),
     FromIndicator(fn(&F, usize) -> bool, Basis<F>),
     Unknown,
 }
@@ -58,6 +58,8 @@ pub struct Names<N, F: Flag> {
     pub functions: Vec<(String, QFlag<N, F>)>,
     pub sets: Vec<(String, Basis<F>, Vec<F>)>,
 }
+
+pub type CoefficientFn<F, N> = Rc<dyn Fn(&F, usize) -> N>;
 
 impl<N, F: Flag> Default for Names<N, F> {
     fn default() -> Self {
@@ -112,7 +114,7 @@ impl<N, F: Flag> Names<N, F> {
         self.sets.push((name.clone(), basis, set));
         name
     }
-    fn name_function(&mut self, f: Rc<dyn Fn(&F, usize) -> N>, basis: Basis<F>) -> String
+    fn name_function(&mut self, f: CoefficientFn<F, N>, basis: Basis<F>) -> String
     where
         F: Flag,
     {

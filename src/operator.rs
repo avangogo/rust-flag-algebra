@@ -3,6 +3,7 @@
 use crate::algebra::QFlag;
 use crate::combinatorics::*;
 use crate::density::*;
+use crate::expr::CoefficientFn;
 use crate::expr::Expr;
 use crate::flag::Flag;
 use log::*;
@@ -768,10 +769,10 @@ impl<F: Flag> Basis<F> {
         P: Fn(&F, usize) -> M + 'static,
         M: Into<N>,
     {
-        let rc_f: Rc<dyn Fn(&F, usize) -> N> = Rc::new(move |a, b| f(a, b).into());
+        let rc_f: CoefficientFn<F, N> = Rc::new(move |a, b| f(a, b).into());
         self.qflag_from_coeff_rc(rc_f)
     }
-    pub(crate) fn qflag_from_coeff_rc<N>(&self, f: Rc<dyn Fn(&F, usize) -> N>) -> QFlag<N, F> {
+    pub(crate) fn qflag_from_coeff_rc<N>(&self, f: CoefficientFn<F, N>) -> QFlag<N, F> {
         let vec: Vec<_> = self.get().iter().map(|g| f(g, self.t.size)).collect();
         QFlag {
             basis: *self,
