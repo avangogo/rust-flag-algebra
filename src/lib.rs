@@ -90,6 +90,22 @@
     unused_results
 )]
 
+
+#![warn(
+    clippy::all,
+    clippy::pedantic,
+//    clippy::nursery,
+//    clippy::cargo,
+)]
+
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc,
+    clippy::wildcard_imports,
+    clippy::module_name_repetitions,
+    clippy::must_use_candidate
+)]
+
 mod algebra;
 pub use crate::algebra::*;
 
