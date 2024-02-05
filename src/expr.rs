@@ -6,6 +6,9 @@ use std::fmt::*;
 use std::ops::{Add, Mul, Neg, Sub};
 use std::rc::Rc;
 
+pub type CoefficientFn<F, N> = Rc<dyn Fn(&F, usize) -> N>;
+pub type IndicatorFn<F> = Rc<dyn Fn(&F, usize) -> bool>;
+
 /// Expressions that represent a computation in flag algebras.
 pub enum Expr<N, F: Flag> {
     Add(RcExpr<N, F>, RcExpr<N, F>),
@@ -19,7 +22,7 @@ pub enum Expr<N, F: Flag> {
     Var(usize),
     Flag(usize, Basis<F>),
     FromFunction(CoefficientFn<F, N>, Basis<F>),
-    FromIndicator(fn(&F, usize) -> bool, Basis<F>),
+    FromIndicator(IndicatorFn<F>, Basis<F>),
     Unknown,
 }
 
@@ -38,7 +41,7 @@ impl<N, F: Flag> Clone for Expr<N, F> {
             Named(a, b, c) => Named(a.clone(), b.clone(), *c),
             Flag(a, b) => Flag(*a, *b),
             FromFunction(a, b) => FromFunction(a.clone(), *b),
-            FromIndicator(a, b) => FromIndicator(*a, *b),
+            FromIndicator(a, b) => FromIndicator(a.clone(), *b),
             Unknown => Unknown,
             Zero => Zero,
             One => One,
@@ -58,8 +61,6 @@ pub struct Names<N, F: Flag> {
     pub functions: Vec<(String, QFlag<N, F>)>,
     pub sets: Vec<(String, Basis<F>, Vec<F>)>,
 }
-
-pub type CoefficientFn<F, N> = Rc<dyn Fn(&F, usize) -> N>;
 
 impl<N, F: Flag> Default for Names<N, F> {
     fn default() -> Self {
@@ -104,7 +105,7 @@ impl<N, F: Flag> Names<N, F> {
             })
             .clone()
     }
-    fn name_set(&mut self, f: fn(&F, usize) -> bool, basis: Basis<F>) -> String
+    fn name_set(&mut self, f: IndicatorFn<F>, basis: Basis<F>) -> String
     where
         F: Flag,
     {
@@ -270,7 +271,7 @@ impl<N, F: Flag> Expr<N, F> {
             ),
             FromIndicator(f, b) => format!(
                 "\\sum_{{F\\in {}\\subseteq{}}}F",
-                names.name_set(*f, *b),
+                names.name_set(f.clone(), *b),
                 latex_basis(b, names)
             ),
             Unknown => "Unknown".into(),
@@ -440,7 +441,7 @@ where
             },
             Named(e, _, _) => e.eval0(context),
             Flag(i, basis) => Val::QFlag(basis.flag_from_id(*i)),
-            FromIndicator(f, basis) => Val::QFlag(basis.qflag_from_indicator(*f)),
+            FromIndicator(f, basis) => Val::QFlag(basis.qflag_from_indicator_rc(f.clone())),
             FromFunction(f, basis) => Val::QFlag(basis.qflag_from_coeff_rc(f.clone())),
             Zero => Val::Num(N::zero()),
             One => Val::Num(N::one()),
@@ -512,7 +513,7 @@ impl<N, F: Flag> Expr<N, F> {
             Unlab(e) => Unlab(rec(e)),
             Named(e, name, latex) => Named(rec(e), name.clone(), *latex),
             FromFunction(_g, b) => FromFunction(Rc::new(|_, _| unimplemented!()), *b), // Fixme
-            FromIndicator(g, b) => FromIndicator(*g, *b),
+            FromIndicator(g, b) => FromIndicator(g.clone(), *b),
             Var(i) => Var(*i),
             Flag(id, b) => Flag(*id, *b),
             Unknown => Unknown,

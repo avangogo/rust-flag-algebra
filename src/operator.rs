@@ -5,6 +5,7 @@ use crate::combinatorics::*;
 use crate::density::*;
 use crate::expr::CoefficientFn;
 use crate::expr::Expr;
+use crate::expr::IndicatorFn;
 use crate::flag::Flag;
 use log::*;
 use ndarray::*;
@@ -676,7 +677,7 @@ impl<F: Flag> Basis<F> {
             basis: self,
             data: Array::from_elem(n, N::one()),
             scale: 1,
-            expr: Expr::FromIndicator(|_, _| true, self),
+            expr: Expr::FromIndicator(Rc::new(|_, _| true), self),
         }
     }
     /// The zero vector in the specified basis.
@@ -727,11 +728,19 @@ impl<F: Flag> Basis<F> {
     ///
     /// /// Sum of the graphs of size 3 rooted on one vertex v
     /// /// where v has degree at least 1
-    /// let t = Type::from_flag(&Graph::new(1, &[])); // Type for one vertex
+    /// let t: Type<Graph> = Type::from_flag(&Graph::new(1, &[])); // Type for one vertex
     /// let basis = Basis::new(3).with_type(t);
-    /// let sum: QFlag<f64, Graph> = basis.qflag_from_indicator(|g, _| g.edge(0, 1) || g.edge(0, 2) );
+    /// let sum: QFlag<f64, Graph> = basis.qflag_from_indicator(move |g, _| g.edge(0, 1) || g.edge(0, 2) );
     /// ```
-    pub fn qflag_from_indicator<N>(self, f: fn(&F, usize) -> bool) -> QFlag<N, F>
+    pub fn qflag_from_indicator<N, P>(self, predicate: P) -> QFlag<N, F>
+    where
+        P: Fn(&F, usize) -> bool + 'static,
+        N: One + Zero,
+    {
+        let indicator_rs: IndicatorFn<F> = Rc::new(move |a, b| predicate(a, b));
+        self.qflag_from_indicator_rc(indicator_rs)
+    }
+    pub(super) fn qflag_from_indicator_rc<N>(self, predicate: IndicatorFn<F>) -> QFlag<N, F>
     where
         N: One + Zero,
     {
@@ -739,7 +748,7 @@ impl<F: Flag> Basis<F> {
             .get()
             .iter()
             .map(|flag| {
-                if f(flag, self.t.size) {
+                if predicate(flag, self.t.size) {
                     N::one()
                 } else {
                     N::zero()
@@ -750,7 +759,7 @@ impl<F: Flag> Basis<F> {
             basis: self,
             data: Array::from(vec),
             scale: 1,
-            expr: Expr::FromIndicator(f, self),
+            expr: Expr::FromIndicator(predicate, self),
         }
     }
     /// Return the formal sum of `f(g)*g` on the flags `g` of the basis `self`.
