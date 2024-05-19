@@ -20,18 +20,6 @@ where
 {
     /// Return the next value of the iterator.
     fn next(&mut self) -> Option<&A>;
-
-    /// Consume the iterator and return the number of elements yielded.
-    fn count(mut self) -> usize
-    where
-        Self: Sized,
-    {
-        let mut count = 0;
-        while self.next().is_some() {
-            count += 1;
-        }
-        count
-    }
 }
 
 /// Iterator on subsets of `[n]`.
@@ -297,24 +285,36 @@ impl StreamingIterator<[usize]> for Injection {
 mod tests {
     use super::*;
 
+    fn count<I, T>(mut iterator: I) -> usize
+    where
+        I: StreamingIterator<T>,
+        T: ?Sized,
+    {
+        let mut count = 0;
+        while iterator.next().is_some() {
+            count += 1;
+        }
+        count
+    }
+
     #[test]
     fn unit_subsets() {
-        assert_eq!(1, Subsets::new(0).count());
-        assert_eq!(2, Subsets::new(1).count());
-        assert_eq!(16, Subsets::new(4).count());
+        assert_eq!(1, count(Subsets::new(0)));
+        assert_eq!(2, count(Subsets::new(1)));
+        assert_eq!(16, count(Subsets::new(4)));
     }
 
     #[test]
     fn unit_choose() {
-        assert_eq!(120, Choose::new(10, 3).count());
-        assert_eq!(3, Choose::new(3, 1).count());
-        assert_eq!(1, Choose::new(0, 0).count());
-        assert_eq!(1, Choose::new(2, 2).count());
-        assert_eq!(120, Choose::with_fixed_part(11, 4, 1).count());
-        assert_eq!(1, Choose::with_fixed_part(5, 5, 4).count());
-        assert_eq!(1, Choose::with_fixed_part(4, 4, 4).count());
-        assert_eq!(1, Choose::with_fixed_part(6, 2, 2).count());
-        assert_eq!(1, Choose::with_fixed_part(0, 0, 0).count());
+        assert_eq!(120, count(Choose::new(10, 3)));
+        assert_eq!(3, count(Choose::new(3, 1)));
+        assert_eq!(1, count(Choose::new(0, 0)));
+        assert_eq!(1, count(Choose::new(2, 2)));
+        assert_eq!(120, count(Choose::with_fixed_part(11, 4, 1)));
+        assert_eq!(1, count(Choose::with_fixed_part(5, 5, 4)));
+        assert_eq!(1, count(Choose::with_fixed_part(4, 4, 4)));
+        assert_eq!(1, count(Choose::with_fixed_part(6, 2, 2)));
+        assert_eq!(1, count(Choose::with_fixed_part(0, 0, 0)));
     }
 
     #[test]
@@ -329,11 +329,11 @@ mod tests {
 
     #[test]
     fn unit_injection() {
-        assert_eq!(60, Injection::new(5, 3).count());
-        assert_eq!(1, Injection::new(42, 0).count());
-        assert_eq!(720, Injection::permutation(6).count());
-        assert_eq!(20, Injection::with_fixed_part(8, 5, 3).count());
-        assert_eq!(1, Injection::with_fixed_part(6, 2, 2).count());
-        assert_eq!(1, Injection::new(0, 0).count());
+        assert_eq!(60, count(Injection::new(5, 3)));
+        assert_eq!(1, count(Injection::new(42, 0)));
+        assert_eq!(720, count(Injection::permutation(6)));
+        assert_eq!(20, count(Injection::with_fixed_part(8, 5, 3)));
+        assert_eq!(1, count(Injection::with_fixed_part(6, 2, 2)));
+        assert_eq!(1, count(Injection::new(0, 0)));
     }
 }

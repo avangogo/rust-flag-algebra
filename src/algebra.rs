@@ -520,13 +520,11 @@ pub(crate) struct IneqMeta<N, F: Flag> {
     pub basis: Basis<F>,
     /// Expression recording how the left sides of the inequalities where constructed.
     pub flag_expr: Expr<N, F>,
-    ///
     forall: Option<VarRange<F>>,
     /// Expression recording how the right sides where constructed.
     pub bound_expr: Expr<N, F>,
     /// True if the inequality is an equality
     pub equality: bool,
-    ///
     scale: u64,
 }
 

@@ -215,8 +215,8 @@ where
     pub fn write_sdpa(&self, filename: &str) -> io::Result<()> {
         let mut filename = PathBuf::from(filename);
         let _ = filename.set_extension("sdpa");
-        let mut file = BufWriter::new(File::create(&filename)?);
         info!("Writing problem in {}", filename.display());
+        let mut file = BufWriter::new(File::create(&filename)?);
         self.write_header(&mut file)?;
         debug!("Generating Cauchy-Schwarz inequalities");
         let cs_mat: Vec<_> = self.cs.get();
@@ -240,8 +240,7 @@ where
         for _ in &self.cs_subspace {
             write!(file, "0 ")?;
         }
-        writeln!(file)?;
-        writeln!(file)?;
+        write!(file, "\n\n")?;
         // Lines 5+: body
         // Matrix 0: Objective
         for (block_num, ineq) in self.ineqs.iter().enumerate() {
@@ -588,10 +587,7 @@ impl<'a, N, F: Flag> Iterator for IneqsIter<'a, N, F> {
 type Id = (usize, CSMode);
 
 impl Selector {
-    pub fn new<N, F: Flag>(prob: &Problem<N, F>) -> Self
-    where
-        F: Flag,
-    {
+    pub fn new<N, F: Flag>(prob: &Problem<N, F>) -> Self {
         let mut simple = ArrayVec::new();
         simple.push(Simple); //FIXME
                              //simple.push(Invariant);
