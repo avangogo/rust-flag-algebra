@@ -1,6 +1,6 @@
 [package]
 name = "flag-algebra"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Rémi de Verclos <remi.de.verclos@gmail.com>"]
 description = "An implementation of Razborov's flag algebras"
 publish = true
@@ -31,6 +31,7 @@ arrayvec = "0.7.4"
 log = "0.4.21"
 thiserror = "1.0.61"
 const_format = "0.2.32"
+flate2 = "1.0.30"
 
 [dev-dependencies]
 approx = "0.5.1"
