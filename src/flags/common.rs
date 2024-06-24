@@ -28,8 +28,6 @@ pub trait FlatMatrix: Sized {
     fn from_vec(_: Vec<Self::Item>) -> Self;
     /// Map a pair of indices to the corresponding index in the matrix.
     fn flat_index(i: usize, j: usize) -> usize;
-    /// Iterator on every non-symetric entries of the matrix.
-    fn index_iter(n: usize) -> Self::IndexIter;
     /// Iterator on every non-symetric index an line `v`.
     fn halfline_iter(v: usize) -> Range<usize>;
     /// Iterator on every non-symetric index an line `v`.
@@ -79,7 +77,6 @@ pub trait FlatMatrix: Sized {
     {
         self.data_mut().resize(Self::data_size(n), e)
     }
-    ///
     fn induce0(&self, p: &[usize]) -> Self
     where
         Self::Item: Clone,
@@ -127,10 +124,6 @@ impl<A> FlatMatrix for Sym<A> {
     #[inline]
     fn from_vec(v: Vec<A>) -> Self {
         Sym(v)
-    }
-    #[inline]
-    fn index_iter(n: usize) -> Self::IndexIter {
-        Box::new((0..n).flat_map(move |j| (0..=j).map(move |i| (i, j, Self::data_size(j) + i))))
     }
     #[inline]
     fn line_iter(n: usize, v: usize) -> Self::LineIter {
@@ -190,9 +183,6 @@ impl<A> FlatMatrix for SymNonRefl<A> {
     }
     fn from_vec(v: Vec<A>) -> Self {
         SymNonRefl(v)
-    }
-    fn index_iter(n: usize) -> Self::IndexIter {
-        Box::new((0..n).flat_map(move |j| (0..j).map(move |i| (i, j, Self::data_size(j) + i))))
     }
     fn line_iter(n: usize, v: usize) -> Self::LineIter {
         debug_assert!(v <= n);
@@ -258,9 +248,6 @@ where
     }
     fn from_vec(v: Vec<A>) -> Self {
         AntiSym(v)
-    }
-    fn index_iter(n: usize) -> Self::IndexIter {
-        Box::new((0..n).flat_map(move |i| (0..i).map(move |j| (i, j, Self::flat_index_raw(j, i)))))
     }
     fn line_iter(n: usize, v: usize) -> Self::LineIter {
         debug_assert!(v <= n);
@@ -436,7 +423,6 @@ mod tests {
     use crate::Flag;
 
     fn auto_test_flatmatrix<S: FlatMatrix<Item = i64>>(n: usize) {
-        assert_eq!(S::index_iter(n).count(), S::data_size(n));
         println!("{}_{}", n + 1, n / 2);
         assert_eq!(
             S::line_iter(n + 1, n / 2).count(),
@@ -449,12 +435,6 @@ mod tests {
                 assert_eq!(x.get(u, v), 0);
                 x.set((u, v), 1);
             }
-        }
-        // injectivity of index_iter
-        let mut x = S::new(0, n);
-        for (u, v, _uv) in S::index_iter(n) {
-            assert_eq!(x.get(u, v), 0);
-            x.set((u, v), 1);
         }
     }
 
