@@ -17,6 +17,7 @@ pub struct SdpaCoeff {
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[allow(clippy::enum_variant_names)]
     #[error("Error while parsing matrix coefficient: {0}")]
     ParseError(String),
     #[error("{0}")]

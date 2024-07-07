@@ -3,7 +3,7 @@ use crate::algebra::*;
 use crate::expr::Names;
 use crate::flag::Flag;
 use crate::operator::{Basis, Savable};
-use crate::sdp::*;
+use crate::problem::sdp::*;
 use crate::tools::Draw;
 use ndarray::ScalarOperand;
 use num::{FromPrimitive, Num, Zero};

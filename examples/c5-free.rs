@@ -1,6 +1,5 @@
 use flag_algebra::*;
 use flags::Graph;
-use sdp::Problem;
 
 fn is_hamiltonian(g: &Graph) -> bool {
     let mut path = Vec::new();

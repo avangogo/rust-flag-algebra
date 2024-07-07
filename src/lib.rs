@@ -102,12 +102,12 @@ pub mod tools;
 pub use crate::operator::{Basis, Savable, Type};
 
 mod expr;
-pub mod sdp;
-pub mod sdpa;
-pub use crate::sdp::Problem;
+pub use crate::problem::sdp::Problem;
 pub use crate::tools::FlagSolver;
 
 mod flag;
+mod problem;
+
 pub use crate::flag::*;
 
 #[macro_use]

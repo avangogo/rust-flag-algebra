@@ -7,7 +7,7 @@ use std::result::Result;
 
 use log::*;
 
-use crate::sdpa::{Error, SdpaCoeff};
+use crate::problem::sdpa::{Error, SdpaCoeff};
 
 const CS_COST: f64 = 100.;
 const INEQ_COST: f64 = 1.;

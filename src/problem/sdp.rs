@@ -1,14 +1,14 @@
 //! Create and manipulate semi-definite problems.
 
+use super::sdpa::*;
 use crate::algebra::*;
 use crate::expr::Expr;
 use crate::flag::Flag;
 use crate::operator::*;
-use crate::sdpa::*;
 use crate::tools::csdp;
 use crate::tools::csdp_minimize_certificate;
 use arrayvec::ArrayVec;
-use ndarray_linalg::{Cholesky, Eigh, UPLO};
+use ndarray_linalg::{Eigh, UPLO};
 use num::*;
 use sprs::{CsMat, TriMat};
 use std::ops::Index;
@@ -900,46 +900,6 @@ where
     }
 }
 
-pub fn cholesky_qflags<F>(cs: &CauchySchwarzMatrix<F>, mat: &Array2<f64>) -> Vec<QFlag<f64, F>>
-where
-    F: Flag,
-{
-    let mut res = Vec::with_capacity(mat.ncols());
-
-    let cholesky0 = Cholesky::cholesky(mat, UPLO::Upper).unwrap();
-    // Fixme
-
-    let cholesky = match cs.0 {
-        Invariant => {
-            let inv_mat = crate::density::class_matrices(&cs.1.invariant_classes().get())
-                .0
-                .map(|&x| x as f64);
-            (&inv_mat * &cholesky0.t()).t().to_owned()
-        }
-        AntiInvariant => {
-            let inv_mat = crate::density::class_matrices(&cs.1.invariant_classes().get())
-                .1
-                .map(|&x| x as f64);
-            (&inv_mat * &cholesky0.t()).t().to_owned()
-        }
-        _ => cholesky0,
-    };
-
-    //FIXME
-    for i in 0..cholesky.nrows() {
-        let data = cholesky.row(i).to_owned();
-        assert_eq!(data.len(), cs.1.split.left_basis().get().len());
-        res.push(QFlag {
-            basis: cs.1.split.left_basis(),
-            data,
-            scale: 1,
-            expr: Expr::unknown("Cholesky".into()),
-        })
-    }
-
-    res
-}
-
 pub fn eigenvectors_qflags<F>(
     cs: &CauchySchwarzMatrix<F>,
     mat: &Array2<f64>,
@@ -947,7 +907,6 @@ pub fn eigenvectors_qflags<F>(
 where
     F: Flag,
 {
-    // FIXME: code duplication
     let mut res = Vec::with_capacity(mat.ncols());
 
     let (eigenvalues, eigenvectors) = mat.eigh(UPLO::Lower).unwrap();
