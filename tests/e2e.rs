@@ -15,6 +15,20 @@ fn make_goodman_problem() -> Problem<f64, Graph> {
     }
 }
 
+fn make_turan_problem(forbidden: &Graph, n: usize) -> Problem<f64, Graph> {
+    let basis = Basis::new(n);
+
+    Problem {
+        ineqs: vec![
+            total_sum_is_one(basis),
+            flags_are_nonnegative(basis),
+            flag(forbidden).expand(basis).equal(0.0),
+        ],
+        cs: basis.all_cs(),
+        obj: -flag(&Graph::clique(2)).expand(basis),
+    }
+}
+
 #[test]
 pub fn solve_with_csdp() {
     let problem = make_goodman_problem();
@@ -42,4 +56,14 @@ pub fn solve_and_read_certificate() {
         epsilon = 0.00001
     );
     assert_eq!(certificate.coeffs.len(), 18);
+}
+
+#[test]
+pub fn turan_with_csdp() {
+    let triangle = Graph::clique(3);
+    let problem = make_turan_problem(&triangle, 3);
+
+    let temp_dir = tempfile::tempdir().unwrap();
+    let file = format!("{}/es_e2e", temp_dir.path().to_str().unwrap());
+    assert_eq!(problem.solve_csdp(&file).unwrap(), -0.5);
 }

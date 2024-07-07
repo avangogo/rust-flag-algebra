@@ -24,7 +24,7 @@ canonical-form = "0.10.0"
 typenum = "1.17.0"
 svg = "0.17.0"
 simplelog = "0.12.2"
-ndarray-linalg = { version = "0.16.0", features = ["netlib"] }
+ndarray-linalg = { version = "0.16.0" }
 failure = "0.1.8"
 failure_derive = "0.1.8"
 arrayvec = "0.7.4"
