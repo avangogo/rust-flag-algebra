@@ -373,7 +373,7 @@ where
         writeln!(w, "<h4>{cs}</h4><p>")?;
         svg::write(
             &mut w,
-            &cs.1.unlabeling.basis.get()[cs.1.unlabeling.flag].draw(),
+            &cs.operator.unlabeling.basis.get()[cs.operator.unlabeling.flag].draw(),
         )?;
         writeln!(w, "</p>")?;
         let mat = &cert.x[pb.ineqs.len() + block];

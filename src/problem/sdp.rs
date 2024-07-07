@@ -195,24 +195,27 @@ type VecCsMode = ArrayVec<CSMode, 2>;
 
 /// Identifies a product-and-unlabel matrix with a symmetry reduction
 #[derive(Debug, Clone)]
-pub struct CauchySchwarzMatrix<F: Flag>(pub CSMode, pub MulAndUnlabel<F>);
+pub struct CauchySchwarzMatrix<F: Flag> {
+    pub cs_mode: CSMode,
+    pub operator: MulAndUnlabel<F>,
+}
 
 impl<F: Flag> Display for CauchySchwarzMatrix<F> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.0 {
-            Simple => write!(f, "{}", self.1),
-            Invariant => write!(f, "{} invariant", self.1),
-            AntiInvariant => write!(f, "{} anti-invariant", self.1),
+        match self.cs_mode {
+            Simple => write!(f, "{}", self.operator),
+            Invariant => write!(f, "{} invariant", self.operator),
+            AntiInvariant => write!(f, "{} anti-invariant", self.operator),
         }
     }
 }
 
 impl<F: Flag> CauchySchwarzMatrix<F> {
     pub fn get(&self) -> Vec<CsMat<i64>> {
-        match self.0 {
-            Simple => self.1.get(),
-            Invariant => self.1.reduced().get().0,
-            AntiInvariant => self.1.reduced().get().1,
+        match self.cs_mode {
+            Simple => self.operator.get(),
+            Invariant => self.operator.reduced().get().0,
+            AntiInvariant => self.operator.reduced().get().1,
         }
     }
 }
@@ -221,12 +224,6 @@ impl<F: Flag> CauchySchwarzMatrix<F> {
 pub(crate) struct Select<'a, A, B> {
     pub selected: &'a A,
     pub selector: &'a B,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct SelectIter<'a, A, B> {
-    content: &'a Select<'a, A, B>,
-    iter: std::ops::Range<usize>,
 }
 
 /// A reference to a `Problem` filtered by a `Selector`.
@@ -243,32 +240,18 @@ type CsSelect<'a, F> = Select<'a, Vec<MulAndUnlabel<F>>, Vec<VecCsMode>>;
 type IneqsSelect<'a, N, F> = Select<'a, Vec<Ineq<N, F>>, Vec<Vec<usize>>>;
 type IneqSelect<'a, N, F> = Select<'a, Ineq<N, F>, Vec<usize>>;
 
-#[derive(Debug, Clone)]
-pub struct CsIter<'a, F: Flag> {
-    content: CsSelect<'a, F>,
-    iter: std::ops::Range<usize>,
-    next: Option<CauchySchwarzMatrix<F>>,
-}
-
-type IneqsIter<'a, N, F> = SelectIter<'a, Vec<Ineq<N, F>>, Vec<Vec<usize>>>;
-type IneqIter<'a, N, F> = SelectIter<'a, Ineq<N, F>, Vec<usize>>;
-
 impl<'a, F: Flag> CsSelect<'a, F> {
-    pub fn iter(&self) -> CsIter<'a, F> {
-        CsIter {
-            content: self.clone(),
-            iter: 0..self.selector.len(),
-            next: None,
-        }
+    pub fn iter(&self) -> impl Iterator<Item = CauchySchwarzMatrix<F>> + 'a {
+        (0..self.selector.len()).flat_map(|i| {
+            let operator = self.selected[i];
+            let select_i = &self.selector[i];
+            select_i
+                .iter()
+                .map(move |&cs_mode| CauchySchwarzMatrix { operator, cs_mode })
+        })
     }
     pub fn len(&self) -> usize {
         self.iter().count()
-    }
-    pub fn get(&self) -> Vec<Vec<CsMat<i64>>>
-    where
-        F: Flag,
-    {
-        self.iter().map(|mat| mat.get()).collect()
     }
 }
 
@@ -281,11 +264,8 @@ impl<'a, N, F: Flag> Index<usize> for IneqSelect<'a, N, F> {
 }
 
 impl<'a, N, F: Flag> IneqsSelect<'a, N, F> {
-    pub fn iter(&'a self) -> IneqsIter<'a, N, F> {
-        SelectIter {
-            content: self,
-            iter: 0..self.selector.len(),
-        }
+    pub fn iter(&'a self) -> impl Iterator<Item = IneqSelect<'a, N, F>> {
+        (0..self.selector.len()).filter_map(|i| self.get(i))
     }
     /// Compute the number of group of inequalities
     pub fn len(&self) -> usize {
@@ -307,12 +287,10 @@ impl<'a, N, F: Flag> IneqsSelect<'a, N, F> {
 }
 
 impl<'a, N, F: Flag> IneqSelect<'a, N, F> {
-    pub fn iter(&'a self) -> IneqIter<'a, N, F> {
-        SelectIter {
-            content: self,
-            iter: 0..self.selector.len(),
-        }
+    pub fn iter(&'a self) -> impl Iterator<Item = &'a IneqData<N>> {
+        (0..self.selector.len()).map(|i| &self[i])
     }
+
     /// Number of (in)equalities in the selected group.
     pub fn len(&self) -> usize {
         self.selector.len()
@@ -332,56 +310,6 @@ impl<'a, N, F: Flag> IneqSelect<'a, N, F> {
 }
 
 // Iterators
-impl<'a, F: Flag> Iterator for CsIter<'a, F> {
-    type Item = CauchySchwarzMatrix<F>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(x) = self.next.take() {
-            Some(x)
-        } else {
-            // FIXME
-            match self.iter.next() {
-                None => None,
-                Some(i) => {
-                    let cs = self.content.selected[i];
-                    let mat = |m| CauchySchwarzMatrix(m, cs);
-                    let select_i = &self.content.selector[i];
-                    match select_i.len() {
-                        0 => self.next(),
-                        1 => Some(mat(select_i[0])),
-                        2 => {
-                            self.next = Some(mat(select_i[0]));
-                            Some(mat(select_i[1]))
-                        }
-                        _ => unimplemented!(),
-                    }
-                }
-            }
-        }
-    }
-}
-
-impl<'a, N, F: Flag> Iterator for IneqIter<'a, N, F> {
-    type Item = &'a IneqData<N>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|i| &self.content[i])
-    }
-}
-
-impl<'a, N, F: Flag> Iterator for IneqsIter<'a, N, F> {
-    type Item = IneqSelect<'a, N, F>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.iter.next() {
-            Some(i) => match self.content.get(i) {
-                None => self.next(),
-                some => some,
-            },
-            None => None,
-        }
-    }
-}
 
 type Id = (usize, CSMode);
 
@@ -516,9 +444,9 @@ impl Certificate<f64> {
                 m.push(TriMat::new((len, len)))
             }
         }
-        for cs in &pb.cs.get() {
+        for cs in pb.cs.iter() {
             // We can avoid some memory usage here
-            let n = cs[0].rows();
+            let n = cs.get()[0].rows();
             for m in &mut tri_mat {
                 m.push(TriMat::new((n, n)))
             }
@@ -692,7 +620,7 @@ where
         data.push(hadamard(cert, m));
     }
     QFlag {
-        basis: cs.1.output_basis(),
+        basis: cs.operator.output_basis(),
         data: Array1::from(data),
         scale: 1,
         expr: Expr::unknown("Cauchy-Schwarz".into()),
@@ -712,15 +640,15 @@ where
 
     let eigenvectors = eigenvectors.t().to_owned();
 
-    let eigenvectors = match cs.0 {
+    let eigenvectors = match cs.cs_mode {
         Invariant => {
-            let inv_mat = crate::density::class_matrices(&cs.1.invariant_classes().get())
+            let inv_mat = crate::density::class_matrices(&cs.operator.invariant_classes().get())
                 .0
                 .map(|&x| x as f64);
             (&inv_mat * &eigenvectors.t()).t().to_owned()
         }
         AntiInvariant => {
-            let inv_mat = crate::density::class_matrices(&cs.1.invariant_classes().get())
+            let inv_mat = crate::density::class_matrices(&cs.operator.invariant_classes().get())
                 .1
                 .map(|&x| x as f64);
             (&inv_mat * &eigenvectors.t()).t().to_owned()
@@ -730,11 +658,11 @@ where
 
     for i in 0..eigenvectors.nrows() {
         let data = eigenvectors.row(i).to_owned();
-        assert_eq!(data.len(), cs.1.split.left_basis().get().len());
+        assert_eq!(data.len(), cs.operator.split.left_basis().get().len());
         res.push((
             eigenvalues[i],
             QFlag {
-                basis: cs.1.split.left_basis(),
+                basis: cs.operator.split.left_basis(),
                 data,
                 scale: 1,
                 expr: Expr::unknown("Eigenvectors".into()),
