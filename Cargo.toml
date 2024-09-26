@@ -24,7 +24,7 @@ canonical-form = "0.10.0"
 typenum = "1.17.0"
 svg = "0.17.0"
 simplelog = { git =  "https://github.com/Drakulix/simplelog.rs.git", commit = "c1954e1" }
-ndarray-linalg = { version = "0.16.0", features = ["netlib"] }
+ndarray-linalg = { version = "0.16.0" }
 failure = "0.1.8"
 failure_derive = "0.1.8"
 arrayvec = "0.7.4"
