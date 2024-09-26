@@ -30,15 +30,6 @@ fn make_turan_problem(forbidden: &Graph, n: usize) -> Problem<f64, Graph> {
 }
 
 #[test]
-pub fn solve_with_csdp() {
-    let problem = make_goodman_problem();
-
-    let temp_dir = tempfile::tempdir().unwrap();
-    let file = format!("{}/goodman_e2e", temp_dir.path().to_str().unwrap());
-    assert_eq!(problem.solve_csdp(&file).unwrap(), 0.25);
-}
-
-#[test]
 pub fn solve_and_read_certificate() {
     let problem = make_goodman_problem();
 
@@ -46,7 +37,8 @@ pub fn solve_and_read_certificate() {
     let file = format!("{}/goodman_e2e", temp_dir.path().to_str().unwrap());
 
     problem.write_sdpa(&file).unwrap();
-    problem.run_csdp(&file, None, false).unwrap();
+    let result = problem.run_csdp(&file, None, false).unwrap();
+    assert_eq!(result, 0.25);
 
     let certificate = SdpaCertificate::load(CERTIFICATE_FILE).unwrap();
 
