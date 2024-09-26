@@ -113,44 +113,25 @@ pub use crate::flag::*;
 #[macro_use]
 extern crate serde_derive;
 
-// Feedback information in the library are sent using simplelog
+// Feedback information in the library are sent using env_logger
 // This logs require to be initialized
-use simplelog::*;
+fn logger(level: log::LevelFilter) {
+    env_logger::builder()
+        .format_module_path(false)
+        .format_target(false)
+        .filter_level(level)
+        .init()
+}
 
-/// Initialize the logs to be outputted to the console.
+/// Initialize the logs to be output to the console.
 ///
 /// In order to be recorded, the logs need to be initialized via this function
-/// or any initializer of the simplelog library
+/// or any other logger
 pub fn init_default_log() {
-    let config = ConfigBuilder::new()
-        .set_max_level(LevelFilter::Error)
-        .set_target_level(LevelFilter::Off)
-        .set_thread_level(LevelFilter::Off)
-        .build();
-    TermLogger::init(
-        LevelFilter::Info,
-        config,
-        TerminalMode::Mixed,
-        ColorChoice::Auto,
-    )
-    .unwrap();
+    logger(log::LevelFilter::Info)
 }
 
 /// Initialize the logs to be outputted to the console with detailed information.
-///
-/// In order to be recorded, the logs need to be initialized via this function
-/// or any initializer of the simplelog library
 pub fn init_debug_log() {
-    let config = ConfigBuilder::new()
-        .set_max_level(LevelFilter::Error)
-        .set_target_level(LevelFilter::Off)
-        .set_thread_level(LevelFilter::Off)
-        .build();
-    TermLogger::init(
-        LevelFilter::Trace,
-        config,
-        TerminalMode::Mixed,
-        ColorChoice::Auto,
-    )
-    .unwrap();
+    logger(log::LevelFilter::Trace)
 }
