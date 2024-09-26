@@ -3,7 +3,7 @@ use crate::algebra::*;
 use crate::expr::Names;
 use crate::flag::Flag;
 use crate::operator::{Basis, Savable};
-use crate::sdp::*;
+use crate::problem::sdp::*;
 use crate::tools::Draw;
 use ndarray::ScalarOperand;
 use num::{FromPrimitive, Num, Zero};
@@ -373,7 +373,7 @@ where
         writeln!(w, "<h4>{cs}</h4><p>")?;
         svg::write(
             &mut w,
-            &cs.1.unlabeling.basis.get()[cs.1.unlabeling.flag].draw(),
+            &cs.operator.unlabeling.basis.get()[cs.operator.unlabeling.flag].draw(),
         )?;
         writeln!(w, "</p>")?;
         let mat = &cert.x[pb.ineqs.len() + block];
