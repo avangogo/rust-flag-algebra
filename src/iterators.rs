@@ -2,17 +2,17 @@
 //!
 //! All these iterators works without allocating new memory after
 //! their initialisation.
-///
-/// Interface for streaming iterators.
-///
-/// Similarly as in the streaming-iterator crate, the elements yielded by the iterator
-/// are borrowed by the iterator.
-/// A loop on such an iterator `iter` is written as follows.
-///```ignore
-///while let Some(item) = iter.next() {
-///    ...
-///}
-///```
+//!
+//! Interface for streaming iterators.
+//!
+//! Similarly as in the streaming-iterator crate, the elements yielded by the iterator
+//! are borrowed by the iterator.
+//! A loop on such an iterator `iter` is written as follows.
+//!```ignore
+//!while let Some(item) = iter.next() {
+//!    ...
+//!}
+//!```
 
 pub trait StreamingIterator<A>
 where

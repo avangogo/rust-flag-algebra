@@ -49,7 +49,6 @@ where
 }
 
 /// Particular implementations
-
 fn coordinates(i: usize, n: usize) -> (f64, f64) {
     assert!(i < n);
     if n == 1 {

@@ -341,7 +341,7 @@ where
     trimat.to_csr()
 }
 
-/// # Flag algebra operations
+// # Flag algebra operations
 
 impl<N, F> Mul for &QFlag<N, F>
 where

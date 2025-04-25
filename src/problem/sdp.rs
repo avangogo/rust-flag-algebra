@@ -1,4 +1,15 @@
 //! Create and manipulate semi-definite problems.
+//!
+//! The optimization problems over flags are translated into a
+//! sdp problem in the sdpa format.
+//!
+//! Shape of the matrices:
+//!
+//! For each i in ineqs (where i is itself a vector of inequalities):
+//! * A diagonal block of size i.len()
+//!
+//! For each cs:
+//! * A block with the size od `cs.input_matrix`
 
 use super::sdpa::*;
 use crate::algebra::*;
@@ -20,16 +31,6 @@ use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::ops::{AddAssign, DivAssign, Neg};
-/// The optimization problems over flags are translated into a
-/// sdp problem in the sdpa format.
-///
-/// Shape of the matrices:
-///
-/// For each i in ineqs (where i is itself a vector of inequalities):
-///    A diagonal block of size i.len()
-///
-/// For each cs:
-///    A block with the size od `cs.input_matrix`
 
 /// An optimization problem expressed in flags algebra.
 #[derive(Debug, Clone)]

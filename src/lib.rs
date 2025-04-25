@@ -41,9 +41,9 @@
 //! * Write problem in .spda format or directly run the CSDP solver.
 //! * Automatically eliminate unnecessary constraints (in a naive way).
 //! * It is generic:
-//! defining new specific class/subclass of flags boils down to implementing a Rust Trait.
+//!   defining new specific class/subclass of flags boils down to implementing a Rust Trait.
 //! * Output flags, problems or certificates as html pages
-//! in (hopefully) human-readable format (provided that it has a reasonnable size).
+//!   in (hopefully) human-readable format (provided that it has a reasonnable size).
 //!
 //!# Supported flags
 //! This library is generic.
@@ -57,14 +57,14 @@
 //! Beside implementing directly [Flag] for your own types, two mechanisms help
 //! to define flag classes based on an existing flag class `F`.
 //! * The [Colored](struct@flags::Colored) structure for defining vertex-colored flags.
-//! If `N` is an integer identifier, `Colored<F, N>` is the type for flags of type `F`
-//! where the vertices are further colored in `N` different colors.
-//! `Colored<F, N>` automatically implement `Flag` when `F` does.
+//!   If `N` is an integer identifier, `Colored<F, N>` is the type for flags of type `F`
+//!   where the vertices are further colored in `N` different colors.
+//!   `Colored<F, N>` automatically implement `Flag` when `F` does.
 //! * The [`SubClass`] structure and
-//! the [`SubFlag`] for classes that are subsets
-//! of already defined classes.
-//! This is usefull for instance for computing in triangle-free graphs flag algebra
-//! without considering other graphs.
+//!   the [`SubFlag`] for classes that are subsets of already defined classes.
+//!   This is usefull for instance for computing in triangle-free graphs flag algebra
+//!   without considering other graphs.
+//!
 //! See the documentation page of [`SubFlag`] for more details.
 //!
 //!# Expressing elements of a flag algebra
