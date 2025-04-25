@@ -91,7 +91,7 @@ where
     }
 }
 
-impl<'a, N, F> Sub for &'a QFlag<N, F>
+impl<N, F> Sub for &QFlag<N, F>
 where
     N: Clone + Num + FromPrimitive + ScalarOperand,
     F: Flag,
@@ -139,7 +139,7 @@ where
     }
 }
 
-impl<'a, N, F> Neg for &'a QFlag<N, F>
+impl<N, F> Neg for &QFlag<N, F>
 where
     N: Clone + Neg<Output = N>,
     F: Flag,
@@ -343,7 +343,7 @@ where
 
 /// # Flag algebra operations
 
-impl<'a, N, F> Mul for &'a QFlag<N, F>
+impl<N, F> Mul for &QFlag<N, F>
 where
     N: Num + Clone + FromPrimitive,
     F: Flag,

@@ -86,7 +86,7 @@ impl<N, F: Flag> Problem<N, F> {
     }
 }
 
-impl<'a, N, F> ProblemView<'a, N, F>
+impl<N, F> ProblemView<'_, N, F>
 where
     N: Display + Neg<Output = N> + Zero + Copy + PartialEq,
     F: Flag,
@@ -255,7 +255,7 @@ impl<'a, F: Flag> CsSelect<'a, F> {
     }
 }
 
-impl<'a, N, F: Flag> Index<usize> for IneqSelect<'a, N, F> {
+impl<N, F: Flag> Index<usize> for IneqSelect<'_, N, F> {
     type Output = IneqData<N>;
 
     fn index(&self, i: usize) -> &Self::Output {

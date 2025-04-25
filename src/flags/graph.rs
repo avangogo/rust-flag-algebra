@@ -25,7 +25,7 @@ struct EdgeIterator<'a> {
     v: usize,
 }
 
-impl<'a> Iterator for EdgeIterator<'a> {
+impl Iterator for EdgeIterator<'_> {
     type Item = (usize, usize);
 
     fn next(&mut self) -> Option<Self::Item> {

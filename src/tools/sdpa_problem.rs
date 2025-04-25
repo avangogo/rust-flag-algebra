@@ -179,7 +179,7 @@ impl SdpaCertificate {
 /// Run csdp and parse its output
 pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error> {
     let mut command = Command::new("csdp");
-    let _ = command.arg(filename).arg(&certificate_filename(filename));
+    let _ = command.arg(filename).arg(certificate_filename(filename));
     if let Some(sol) = initial_solution {
         let _ = command.arg(sol);
     };
