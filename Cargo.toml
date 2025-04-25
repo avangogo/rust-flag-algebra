@@ -22,7 +22,7 @@ serde_derive = "1.0"
 bincode = "1.3.3"
 canonical-form = "0.10.0"
 typenum = "1.17.0"
-svg = "0.17.0"
+svg = "0.18.0"
 env_logger = "0.11.7"
 ndarray-linalg = { version = "0.17.0" }
 failure = "0.1.8"
