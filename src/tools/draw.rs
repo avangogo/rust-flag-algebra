@@ -1,7 +1,7 @@
 use crate::flag::SubClass;
 use crate::flags::{CGraph, Colored, DirectedGraph, Graph, OrientedGraph};
-use svg::node::element::{Circle, Line, Polygon, SVG};
 use svg::node::Node;
+use svg::node::element::{Circle, Line, Polygon, SVG};
 
 /// Draw flags in svg
 pub trait Draw: Sized {

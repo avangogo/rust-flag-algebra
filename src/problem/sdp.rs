@@ -299,11 +299,7 @@ impl<'a, N, F: Flag> IneqSelect<'a, N, F> {
     /// Number of equalities in the selected group where equalities count for 2 (for ≥ and ≤).
     pub fn len_spliting_equalities(&self) -> usize {
         let len = self.len();
-        if self.meta().equality {
-            len * 2
-        } else {
-            len
-        }
+        if self.meta().equality { len * 2 } else { len }
     }
     pub fn meta(&self) -> &IneqMeta<N, F> {
         &self.selected.meta
@@ -318,7 +314,7 @@ impl Selector {
     pub fn new<N, F: Flag>(prob: &Problem<N, F>) -> Self {
         let mut simple = ArrayVec::new();
         simple.push(Simple); //FIXME
-                             //simple.push(Invariant);
+        //simple.push(Invariant);
         (Self {
             ineqs: prob
                 .ineqs

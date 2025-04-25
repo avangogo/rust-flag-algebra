@@ -4,7 +4,7 @@ use crate::expr::{Expr, Names, VarRange};
 use crate::flag::Flag;
 use crate::operator::*;
 use ndarray::{Array1, ScalarOperand};
-use num::{pow::Pow, FromPrimitive, Integer, Num};
+use num::{FromPrimitive, Integer, Num, pow::Pow};
 use sprs::{CsMat, CsMatView, CsVec, MulAcc, TriMat};
 use std::fmt::*;
 use std::ops::*;

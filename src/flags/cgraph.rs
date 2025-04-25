@@ -2,8 +2,8 @@
 
 use crate::combinatorics;
 use crate::flag::{Flag, SubClass};
-use crate::flags::common::*;
 use crate::flags::Colored;
+use crate::flags::common::*;
 use crate::iterators;
 use crate::iterators::StreamingIterator;
 use canonical_form::Canonize;
