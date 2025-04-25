@@ -1,7 +1,6 @@
 use flag_algebra::*;
 use flags::Graph;
 use operator::Basis;
-use sdp::Problem;
 
 pub fn main() {
     init_default_log();

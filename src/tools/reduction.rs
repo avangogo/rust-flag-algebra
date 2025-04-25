@@ -1,7 +1,8 @@
 //! WIP tools to minimize certificates
 
 use crate::flag::Flag;
-use crate::sdp::*;
+use crate::problem::sdp::*;
+use crate::problem::sdpa;
 use crate::tools::*;
 use log::*;
 use sprs::CsMat;
@@ -55,7 +56,7 @@ where
                 self.select_certificate_file = Some(select);
                 match self.pb.run_csdp(&self.name, None, false) {
                     Ok(v) => Ok(v),
-                    Err(crate::sdpa::Error::SdpNotSolved(_)) => Err(()),
+                    Err(sdpa::Error::SdpNotSolved(_)) => Err(()),
                     Err(e) => panic!("Failed to run csdp {e}"),
                 }
             }

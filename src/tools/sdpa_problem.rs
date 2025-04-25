@@ -7,13 +7,14 @@ use std::result::Result;
 
 use log::*;
 
-use crate::sdpa::{Error, SdpaCoeff};
+use crate::problem::sdpa::{Error, SdpaCoeff};
 
 const CS_COST: f64 = 100.;
 const INEQ_COST: f64 = 1.;
 
-pub const CERTIFICATE_FILE: &str = "certificate";
-pub const CERTIFICATE_MINIMIZE_FILE: &str = "certificate_minimize";
+fn certificate_filename(filename: &str) -> String {
+    format!("{filename}.cert.sdpa")
+}
 
 // SDPA format for problems
 // 1. dimension ( =b.len() )
@@ -178,7 +179,7 @@ impl SdpaCertificate {
 /// Run csdp and parse its output
 pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error> {
     let mut command = Command::new("csdp");
-    let _ = command.arg(filename).arg(CERTIFICATE_FILE);
+    let _ = command.arg(filename).arg(&certificate_filename(filename));
     if let Some(sol) = initial_solution {
         let _ = command.arg(sol);
     };
@@ -249,17 +250,19 @@ pub fn csdp_minimize_certificate(
 ) -> Result<f64, Error> {
     let val = csdp(filename, initial_solution)?;
     let problem = SdpaProblem::load(filename)?.to_certificate_minimization(val);
-    let cert = SdpaCertificate::load(CERTIFICATE_FILE)?.to_certificate_minimization(&problem);
+    let cert = SdpaCertificate::load(&certificate_filename(filename))?
+        .to_certificate_minimization(&problem);
     let filename_minimize = format!("{filename}.minimize");
+    let filename_certificate_minimize = format!("{filename}.minimize.certificate");
     problem.write(&filename_minimize)?;
-    cert.write(CERTIFICATE_MINIMIZE_FILE)?;
+    cert.write(&filename_certificate_minimize)?;
     info!("Try to minimize certificate");
-    match csdp(&filename_minimize, Some(CERTIFICATE_MINIMIZE_FILE)) {
+    match csdp(&filename_minimize, Some(&filename_certificate_minimize)) {
         Ok(_) => {
             info!("Certificate minimized");
-            SdpaCertificate::load(CERTIFICATE_MINIMIZE_FILE)?
+            SdpaCertificate::load(&filename_certificate_minimize)?
                 .from_certificate_minimization()
-                .write(CERTIFICATE_FILE)?;
+                .write(&certificate_filename(filename))?;
         }
         Err(_) => {
             warn!("Cannot minimize certificate");
