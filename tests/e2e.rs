@@ -1,8 +1,5 @@
 use approx::assert_relative_eq;
-use flag_algebra::{
-    tools::{SdpaCertificate, CERTIFICATE_FILE},
-    *,
-};
+use flag_algebra::{tools::SdpaCertificate, *};
 use flags::Graph;
 
 fn make_goodman_problem() -> Problem<f64, Graph> {
@@ -35,12 +32,16 @@ pub fn solve_and_read_certificate() {
 
     let temp_dir = tempfile::tempdir().unwrap();
     let file = format!("{}/goodman_e2e", temp_dir.path().to_str().unwrap());
+    let certificate_file = format!(
+        "{}/goodman_e2e.sdpa.cert.sdpa",
+        temp_dir.path().to_str().unwrap()
+    );
 
     problem.write_sdpa(&file).unwrap();
     let result = problem.run_csdp(&file, None, false).unwrap();
     assert_eq!(result, 0.25);
 
-    let certificate = SdpaCertificate::load(CERTIFICATE_FILE).unwrap();
+    let certificate = SdpaCertificate::load(&certificate_file).unwrap();
 
     assert_relative_eq!(
         *certificate.y.as_slice(),
