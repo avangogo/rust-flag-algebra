@@ -10,8 +10,8 @@ use crate::flag::Flag;
 use log::*;
 use ndarray::*;
 use num::*;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use sprs::CsMat;
 use std::error::Error;
 use std::fmt;
@@ -764,6 +764,7 @@ impl<F: Flag> Basis<F> {
             expr: Expr::FromIndicator(predicate, self),
         }
     }
+
     /// Return the formal sum of `f(g)*g` on the flags `g` of the basis `self`.
     /// The second parameter of `f` is the size of the type of `g`.
     /// ```
@@ -774,7 +775,6 @@ impl<F: Flag> Basis<F> {
     /// let b = Basis::<Graph>::new(3);
     /// let sum: QFlag<f64, Graph>  = b.qflag_from_coeff(|g, _| g.edges().count() as f64 );
     /// ```
-
     pub fn qflag_from_coeff<N, M, P>(self, f: P) -> QFlag<N, F>
     where
         P: Fn(&F, usize) -> M + 'static,

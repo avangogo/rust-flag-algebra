@@ -2,7 +2,7 @@
 
 use crate::flag::Flag;
 use crate::iterators::*;
-use sprs::{CsMat, TriMatI, CSC, CSR};
+use sprs::{CSC, CSR, CsMat, TriMatI};
 
 fn induce_and_reduce<F: Flag>(type_size: usize, f: &F, subset: &[usize]) -> F {
     f.induce(subset).canonical_typed(type_size)

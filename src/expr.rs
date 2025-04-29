@@ -293,7 +293,7 @@ fn latex_basis<N, F: Flag>(basis: &Basis<F>, names: &mut Names<N, F>) -> String 
 
 struct Paren<'a, N, F: Flag>(&'a Expr<N, F>);
 
-impl<'a, N, F: Flag> Display for Paren<'a, N, F>
+impl<N, F: Flag> Display for Paren<'_, N, F>
 where
     Expr<N, F>: Display,
 {
@@ -306,7 +306,7 @@ where
     }
 }
 
-impl<'a, N, F> Paren<'a, N, F>
+impl<N, F> Paren<'_, N, F>
 where
     N: Display,
     F: Ord + Flag,

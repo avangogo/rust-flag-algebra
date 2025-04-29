@@ -22,8 +22,8 @@ use ndarray::Array2;
 pub trait Html {
     fn print_html<W: Write>(&self, w: &mut W) -> Result<()>;
 
-    const LATEX: bool = false;
     /// True if Mathjax need to be loaded
+    const LATEX: bool = false;
 
     fn html(&self, name: &str) -> Result<()> {
         let mut filename = PathBuf::from(name);

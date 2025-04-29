@@ -419,8 +419,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::flags::*;
     use crate::Flag;
+    use crate::flags::*;
 
     fn auto_test_flatmatrix<S: FlatMatrix<Item = i64>>(n: usize) {
         println!("{}_{}", n + 1, n / 2);

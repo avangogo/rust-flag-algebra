@@ -179,7 +179,7 @@ impl SdpaCertificate {
 /// Run csdp and parse its output
 pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error> {
     let mut command = Command::new("csdp");
-    let _ = command.arg(filename).arg(&certificate_filename(filename));
+    let _ = command.arg(filename).arg(certificate_filename(filename));
     if let Some(sol) = initial_solution {
         let _ = command.arg(sol);
     };
@@ -190,9 +190,6 @@ pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error
         .spawn()
         .expect("Failed to call csdp");
     let output = BufReader::new(child.stdout.take().unwrap());
-    //    let output = child.wait_with_output().unwrap();
-    //let output = command.output().expect("Failed to call csdp");
-    //    eprint!("{}", String::from_utf8(output.stderr).unwrap());
     use std::time::{Duration, Instant};
     let time_start = Instant::now();
     let mut lines = output.lines();
@@ -241,6 +238,7 @@ pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error
             }
         }
     }
+    let _ = child.wait().unwrap();
     panic!("CSDP output incorrectly parsed")
 }
 

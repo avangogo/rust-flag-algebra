@@ -2,8 +2,8 @@
 
 use crate::combinatorics;
 use crate::flag::{Flag, SubClass};
-use crate::flags::common::*;
 use crate::flags::Colored;
+use crate::flags::common::*;
 use crate::iterators;
 use crate::iterators::StreamingIterator;
 use canonical_form::Canonize;
@@ -152,7 +152,6 @@ impl<const K: u8> Flag for CGraph<K> {
 }
 
 /// This should be properly implemented with a trait:
-
 impl<A, const K: u8> SubClass<CGraph<K>, A> {
     pub fn size(&self) -> usize {
         self.content.size

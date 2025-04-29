@@ -4,7 +4,7 @@ use crate::expr::{Expr, Names, VarRange};
 use crate::flag::Flag;
 use crate::operator::*;
 use ndarray::{Array1, ScalarOperand};
-use num::{pow::Pow, FromPrimitive, Integer, Num};
+use num::{FromPrimitive, Integer, Num, pow::Pow};
 use sprs::{CsMat, CsMatView, CsVec, MulAcc, TriMat};
 use std::fmt::*;
 use std::ops::*;
@@ -91,7 +91,7 @@ where
     }
 }
 
-impl<'a, N, F> Sub for &'a QFlag<N, F>
+impl<N, F> Sub for &QFlag<N, F>
 where
     N: Clone + Num + FromPrimitive + ScalarOperand,
     F: Flag,
@@ -139,7 +139,7 @@ where
     }
 }
 
-impl<'a, N, F> Neg for &'a QFlag<N, F>
+impl<N, F> Neg for &QFlag<N, F>
 where
     N: Clone + Neg<Output = N>,
     F: Flag,
@@ -341,9 +341,9 @@ where
     trimat.to_csr()
 }
 
-/// # Flag algebra operations
+// # Flag algebra operations
 
-impl<'a, N, F> Mul for &'a QFlag<N, F>
+impl<N, F> Mul for &QFlag<N, F>
 where
     N: Num + Clone + FromPrimitive,
     F: Flag,

@@ -1,4 +1,15 @@
 //! Create and manipulate semi-definite problems.
+//!
+//! The optimization problems over flags are translated into a
+//! sdp problem in the sdpa format.
+//!
+//! Shape of the matrices:
+//!
+//! For each i in ineqs (where i is itself a vector of inequalities):
+//! * A diagonal block of size i.len()
+//!
+//! For each cs:
+//! * A block with the size od `cs.input_matrix`
 
 use super::sdpa::*;
 use crate::algebra::*;
@@ -20,16 +31,6 @@ use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::ops::{AddAssign, DivAssign, Neg};
-/// The optimization problems over flags are translated into a
-/// sdp problem in the sdpa format.
-///
-/// Shape of the matrices:
-///
-/// For each i in ineqs (where i is itself a vector of inequalities):
-///    A diagonal block of size i.len()
-///
-/// For each cs:
-///    A block with the size od `cs.input_matrix`
 
 /// An optimization problem expressed in flags algebra.
 #[derive(Debug, Clone)]
@@ -86,7 +87,7 @@ impl<N, F: Flag> Problem<N, F> {
     }
 }
 
-impl<'a, N, F> ProblemView<'a, N, F>
+impl<N, F> ProblemView<'_, N, F>
 where
     N: Display + Neg<Output = N> + Zero + Copy + PartialEq,
     F: Flag,
@@ -255,7 +256,7 @@ impl<'a, F: Flag> CsSelect<'a, F> {
     }
 }
 
-impl<'a, N, F: Flag> Index<usize> for IneqSelect<'a, N, F> {
+impl<N, F: Flag> Index<usize> for IneqSelect<'_, N, F> {
     type Output = IneqData<N>;
 
     fn index(&self, i: usize) -> &Self::Output {
@@ -298,11 +299,7 @@ impl<'a, N, F: Flag> IneqSelect<'a, N, F> {
     /// Number of equalities in the selected group where equalities count for 2 (for ≥ and ≤).
     pub fn len_spliting_equalities(&self) -> usize {
         let len = self.len();
-        if self.meta().equality {
-            len * 2
-        } else {
-            len
-        }
+        if self.meta().equality { len * 2 } else { len }
     }
     pub fn meta(&self) -> &IneqMeta<N, F> {
         &self.selected.meta
@@ -317,7 +314,7 @@ impl Selector {
     pub fn new<N, F: Flag>(prob: &Problem<N, F>) -> Self {
         let mut simple = ArrayVec::new();
         simple.push(Simple); //FIXME
-                             //simple.push(Invariant);
+        //simple.push(Invariant);
         (Self {
             ineqs: prob
                 .ineqs
