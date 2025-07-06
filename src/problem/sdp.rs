@@ -399,7 +399,7 @@ impl Selector {
         res
     }
     pub fn restrict_cs(&self, (i, mode): Id, mat: CsMat<f64>) -> Result<Self, String> {
-        if self.cs[i].iter().any(|&m| m == mode) {
+        if self.cs[i].contains(&mode) {
             // If the id is valid
             let mut res = self.clone();
             res.cs_subspace[i].restrict(mode, mat);
