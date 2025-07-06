@@ -184,7 +184,7 @@ pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error
         let _ = command.arg(sol);
     };
     info!("Calling CSDP");
-    debug!("command: {:?}", command);
+    debug!("command: {command:?}");
     let mut child = command
         .stdout(Stdio::piped())
         .spawn()
@@ -209,9 +209,9 @@ pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error
                 )
             }
             if stream {
-                info!("{}", line)
+                info!("{line}")
             } else {
-                debug!("{}", line)
+                debug!("{line}")
             }
         } else {
             let code = child
@@ -229,10 +229,10 @@ pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error
                     .unwrap()
                     .parse()
                     .unwrap();
-                info!("{} with primal value {}", line, value);
+                info!("{line} with primal value {value}");
                 return Ok(value);
             } else {
-                info!("{}", line);
+                info!("{line}");
                 assert!(code <= 10, "{command:?} aborted with code {code}");
                 return Err(Error::SdpNotSolved(code));
             }

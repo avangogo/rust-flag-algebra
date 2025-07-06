@@ -53,16 +53,24 @@ where
         let value = self.create();
         let file = File::create(path).unwrap();
         let buf = BufWriter::new(file);
-        let compressed_buf = flate2::write::GzEncoder::new(buf, Default::default());
-        bincode::serialize_into(compressed_buf, &value).unwrap();
+        let mut compressed_buf = flate2::write::GzEncoder::new(buf, Default::default());
+        let _ = bincode::serde::encode_into_std_write(
+            &value,
+            &mut compressed_buf,
+            bincode::config::standard(),
+        )
+        .unwrap();
         value
     }
     /// Load the object if the file exists and is valid.
     fn load(&self, path: &Path) -> Result<A, Box<dyn Error>> {
         let file = File::open(path)?;
         let buf = BufReader::new(file);
-        let decompressed_buf = flate2::bufread::GzDecoder::new(buf);
-        let data = bincode::deserialize_from(decompressed_buf)?;
+        let mut decompressed_buf = flate2::bufread::GzDecoder::new(buf);
+        let data = bincode::serde::decode_from_std_read(
+            &mut decompressed_buf,
+            bincode::config::standard(),
+        )?;
         Ok(data)
     }
     /// Function to automatically load the object if the file exists and
