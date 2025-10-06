@@ -21,7 +21,7 @@ serde = "1.0"
 serde_derive = "1.0"
 bincode = { version = "2.0.1", features = ["serde"] }
 canonical-form = "0.10.0"
-typenum = "1.18.0"
+typenum = "1.19.0"
 svg = "0.18.0"
 env_logger = "0.11.8"
 ndarray-linalg = { version = "0.17.0" }
@@ -30,10 +30,10 @@ failure_derive = "0.1.8"
 arrayvec = "0.7.6"
 log = "0.4.28"
 thiserror = "2.0"
-const_format = "0.2.34"
-flate2 = "1.1.2"
+const_format = "0.2.35"
+flate2 = "1.1.4"
 
 [dev-dependencies]
 approx = "0.5.1"
-tempfile = "3.21.0"
+tempfile = "3.23.0"
 criterion = "0.7.0"
