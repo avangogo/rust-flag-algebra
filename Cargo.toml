@@ -36,4 +36,4 @@ flate2 = "1.1.5"
 [dev-dependencies]
 approx = "0.5.1"
 tempfile = "3.23.0"
-criterion = "0.7.0"
+criterion = "0.8.0"
