@@ -14,9 +14,9 @@ keywords = ["flag", "algebra", "graph", "combinatorics"]
 [dependencies]
 num = "0.4.3"
 sprs = { version = "0.11.4", features = ["serde"] }
-ndarray = "0.17.1"
+ndarray = "0.17.2"
 find_folder = "0.3.0"
-rand = "0.9.2"
+rand = "0.10.0"
 serde = "1.0"
 serde_derive = "1.0"
 bincode = { version = "2.0.1", features = ["serde"] }
@@ -24,16 +24,16 @@ canonical-form = "0.10.0"
 typenum = "1.19.0"
 svg = "0.18.0"
 env_logger = "0.11.8"
-ndarray-linalg = { version = "0.18.0" }
+ndarray-linalg = { version = "0.18.1" }
 failure = "0.1.8"
 failure_derive = "0.1.8"
 arrayvec = "0.7.6"
-log = "0.4.28"
+log = "0.4.29"
 thiserror = "2.0"
 const_format = "0.2.35"
-flate2 = "1.1.5"
+flate2 = "1.1.9"
 
 [dev-dependencies]
 approx = "0.5.1"
-tempfile = "3.23.0"
-criterion = "0.7.0"
+tempfile = "3.24.0"
+criterion = "0.8.2"
