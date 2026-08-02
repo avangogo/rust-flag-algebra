@@ -30,7 +30,7 @@ pub fn count_subflag_tabulate<F: Flag>(type_size: usize, f_vec: &[F], g_vec: &[F
             match f_vec.binary_search(&f0) {
                 Ok(i) => column[i] += 1,
                 Err(_) => {
-                    assert!(!F::HEREDITARY, "Flag not found: {:?}", &f0);
+                    assert!(!F::HEREDITARY, "Flag not found: {:?}", f0);
                 }
             };
         }
@@ -109,9 +109,9 @@ pub fn unlabeling_tabulate<F: Flag>(
             debug_assert_eq!(unlabeled, unlabeled.canonical());
         }
         res.push(
-            output_vec.binary_search(&unlabeled).unwrap_or_else(|_| {
-                panic!("Flag not found (type {}): {:?}", type_size, &unlabeled)
-            }),
+            output_vec
+                .binary_search(&unlabeled)
+                .unwrap_or_else(|_| panic!("Flag not found (type {}): {:?}", type_size, unlabeled)),
         )
     }
     res
