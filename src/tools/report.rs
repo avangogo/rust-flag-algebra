@@ -465,7 +465,7 @@ where
     for (i, (val, flag)) in qflag
         .data
         .iter()
-        .zip(qflag.basis.get().into_iter())
+        .zip(qflag.basis.get())
         .enumerate()
     {
         if !val.is_zero() {

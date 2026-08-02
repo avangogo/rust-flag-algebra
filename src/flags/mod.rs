@@ -2,7 +2,7 @@
 
 mod cgraph;
 mod colored;
-mod common;
+pub mod common;
 mod digraph;
 mod graph;
 pub use crate::flags::cgraph::*;
