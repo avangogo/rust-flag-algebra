@@ -109,9 +109,9 @@ pub fn unlabeling_tabulate<F: Flag>(
             debug_assert_eq!(unlabeled, unlabeled.canonical());
         }
         res.push(
-            output_vec.binary_search(&unlabeled).unwrap_or_else(|_| {
-                panic!("Flag not found (type {}): {:?}", type_size, unlabeled)
-            }),
+            output_vec
+                .binary_search(&unlabeled)
+                .unwrap_or_else(|_| panic!("Flag not found (type {}): {:?}", type_size, unlabeled)),
         )
     }
     res

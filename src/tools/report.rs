@@ -462,12 +462,7 @@ where
 {
     let mut path = PathBuf::from(folder);
     let scale: N = N::from_u64(qflag.scale).unwrap();
-    for (i, (val, flag)) in qflag
-        .data
-        .iter()
-        .zip(qflag.basis.get())
-        .enumerate()
-    {
+    for (i, (val, flag)) in qflag.data.iter().zip(qflag.basis.get()).enumerate() {
         if !val.is_zero() {
             let b = qflag.basis;
             let filename = format!("{}in{}t{}id{}", i, b.size, b.t.size, b.t.id);
