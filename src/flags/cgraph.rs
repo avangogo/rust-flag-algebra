@@ -84,18 +84,12 @@ impl<const K: u8> Canonize for CGraph<K> {
     fn size(&self) -> usize {
         self.size
     }
-    fn invariant_neighborhood(&self, v: usize) -> Vec<Vec<usize>> {
+    fn invariant_neighborhood(&self, v: usize) -> impl Iterator<Item = (usize, u64)> {
         assert!(v < self.size);
-        let mut res = vec![Vec::new(); (K - 1) as usize];
-        for u in 0..self.size() {
-            if u != v {
-                let edge = self.edge[(u, v)];
-                if edge > 0 {
-                    res[edge as usize - 1].push(u)
-                }
-            }
-        }
-        res
+        (0..self.size())
+            .filter(move |&u| u != v)
+            .map(move |u| (u, self.edge[(u, v)] as u64))
+            .filter(|(_, weight)| *weight > 0)
     }
 
     fn apply_morphism(&self, p: &[usize]) -> Self {

@@ -135,9 +135,11 @@ impl Canonize for Graph {
     fn size(&self) -> usize {
         self.size
     }
-    fn invariant_neighborhood(&self, v: usize) -> Vec<Vec<usize>> {
+    fn invariant_neighborhood(&self, v: usize) -> impl Iterator<Item = (usize, u64)> {
         assert!(v < self.size);
-        vec![self.nbrs(v)]
+        (0..self.size)
+            .filter(move |&u| u != v && self.edge.get(u, v))
+            .map(|u| (u, 1))
     }
     fn apply_morphism(&self, p: &[usize]) -> Self {
         self.induce(&combinatorics::invert(p))
