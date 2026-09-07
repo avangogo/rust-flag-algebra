@@ -80,19 +80,11 @@ where
     fn size(&self) -> usize {
         self.content.size()
     }
-    fn invariant_neighborhood(&self, v: usize) -> Vec<Vec<usize>> {
+    fn invariant_neighborhood(&self, v: usize) -> impl Iterator<Item = (usize, u64)> {
         self.content.invariant_neighborhood(v)
     }
-    fn invariant_coloring(&self) -> Option<Vec<u64>> {
-        match self.content.invariant_coloring() {
-            None => Some(self.color.iter().map(|&c| c as u64).collect()),
-            Some(mut col) => {
-                for (i, c) in self.color.iter().enumerate() {
-                    col[i] = col[i] * (N as u64) + (*c as u64);
-                }
-                Some(col)
-            }
-        }
+    fn invariant_color(&self, v: usize) -> u64 {
+        self.color[v] as u64 + (N as u64).wrapping_mul(self.content.invariant_color(v))
     }
     fn apply_morphism(&self, p: &[usize]) -> Self {
         let mut color: Vec<u8> = vec![N; p.len()];

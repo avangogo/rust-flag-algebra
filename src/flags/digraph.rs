@@ -284,9 +284,11 @@ impl Canonize for DirectedGraph {
     fn size(&self) -> usize {
         self.size
     }
-    fn invariant_neighborhood(&self, v: usize) -> Vec<Vec<usize>> {
-        assert!(v < self.size);
-        vec![self.out_nbrs(v), self.in_nbrs(v)]
+    fn invariant_neighborhood(&self, v: usize) -> impl Iterator<Item = (usize, u64)> {
+        (0..self.size)
+            .filter(move |&u| u != v)
+            .map(move |u| (u, self.edge.get(u, v) as u64))
+            .filter(|(_, weight)| *weight > 0)
     }
     fn apply_morphism(&self, p: &[usize]) -> Self {
         self.induce(&combinatorics::invert(p))
@@ -297,7 +299,7 @@ impl Canonize for OrientedGraph {
     fn size(&self) -> usize {
         self.size()
     }
-    fn invariant_neighborhood(&self, v: usize) -> Vec<Vec<usize>> {
+    fn invariant_neighborhood(&self, v: usize) -> impl Iterator<Item = (usize, u64)> {
         self.0.invariant_neighborhood(v)
     }
     fn apply_morphism(&self, p: &[usize]) -> Self {

@@ -250,8 +250,11 @@ where
     fn size(&self) -> usize {
         self.content.size()
     }
-    fn invariant_neighborhood(&self, v: usize) -> Vec<Vec<usize>> {
+    fn invariant_neighborhood(&self, v: usize) -> impl Iterator<Item = (usize, u64)> {
         self.content.invariant_neighborhood(v)
+    }
+    fn invariant_color(&self, u: usize) -> u64 {
+        self.content.invariant_color(u)
     }
     fn apply_morphism(&self, p: &[usize]) -> Self {
         self.content.apply_morphism(p).into()
