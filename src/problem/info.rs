@@ -4,7 +4,7 @@ use crate::operator::SplitCount;
 use crate::{Basis, Flag};
 
 pub struct ProblemInfo<N, F: Flag> {
-    pub flag_name: &'static str,
+    pub flag_name: String,
     pub basis: Basis<F>,
     pub n_flags: usize,
     pub n_selected_ineqs: (usize, usize),

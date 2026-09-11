@@ -1,10 +1,7 @@
 //! Flat data structures for binary relations.
 
 use crate::flags::Arc;
-use crate::iterators;
-use crate::iterators::StreamingIterator;
 use std::fmt::Debug;
-use std::iter::Chain;
 use std::mem::swap;
 use std::ops::{Index, IndexMut, Neg, Range};
 
@@ -13,9 +10,6 @@ use std::ops::{Index, IndexMut, Neg, Range};
 pub trait FlatMatrix: Sized {
     /// Type of the entries of the matrix.
     type Item;
-    /// Iterator on one line of the matrix.
-    type LineIter: Iterator<Item = usize>;
-    type IndexIter: Iterator<Item = (usize, usize, usize)>;
     // needed
     /// Length of the underlying vector depending on the number of
     /// line of the matrix.
@@ -30,26 +24,10 @@ pub trait FlatMatrix: Sized {
     fn flat_index(i: usize, j: usize) -> usize;
     /// Iterator on every non-symetric index an line `v`.
     fn halfline_iter(v: usize) -> Range<usize>;
-    /// Iterator on every non-symetric index an line `v`.
-    fn line_iter(n: usize, v: usize) -> Self::LineIter;
-    // recommended
-    /// Give the number of line of the matrix
-    fn possible_size(&self) -> usize {
-        let mut res = 0;
-        let data_size = self.data().len();
-        loop {
-            debug_assert!(Self::data_size(res) <= data_size);
-            if Self::data_size(res) == data_size {
-                return res;
-            } else {
-                res += 1
-            }
-        }
-    }
     // provided
     /// Access to a matrix element.
     #[inline]
-    fn get(&self, i: usize, j: usize) -> Self::Item
+    fn cell(&self, i: usize, j: usize) -> Self::Item
     where
         Self::Item: Clone,
     {
@@ -57,7 +35,7 @@ pub trait FlatMatrix: Sized {
     }
     /// Redefine a matrix entry.
     #[inline]
-    fn set(&mut self, ij: (usize, usize), v: Self::Item) {
+    fn set_cell(&mut self, ij: (usize, usize), v: Self::Item) {
         self.data_mut()[Self::flat_index(ij.0, ij.1)] = v
     }
     #[inline]
@@ -77,19 +55,211 @@ pub trait FlatMatrix: Sized {
     {
         self.data_mut().resize(Self::data_size(n), e)
     }
-    fn induce0(&self, p: &[usize]) -> Self
-    where
-        Self::Item: Clone,
-    {
-        let n = p.len();
-        let mut data = Vec::with_capacity(Self::data_size(n));
-        for (u, &pu) in p.iter().enumerate() {
-            for &pv in &p[Self::halfline_iter(u)] {
-                data.push(self.get(pu, pv))
+}
+
+/// The cells a flat matrix holds, as a stream.
+///
+/// Each implementation fixes its own protocol: which ordered pairs name a cell,
+/// and what one carries. `AntiSym<Arc>` names a cell by an ordered pair, so a
+/// reciprocal pair is two cells that `build` folds back into one.
+///
+/// `build(n, m.iter())` returns `m`. The order is the caller's to supply:
+/// a matrix of order 0 and one of order 1 both hold no cell.
+pub trait Relation: Sized {
+    /// What a cell carries; `()` when being there is all there is to it.
+    type Value;
+    /// The ordered pairs that name a cell of a matrix of order `n`, each once.
+    fn positions(n: usize) -> impl Iterator<Item = (usize, usize)>;
+    /// The content of cell `(u, v)`, or `None` when it is not there.
+    ///
+    /// Defined on every ordered pair, `u == v` included; under a symmetric
+    /// protocol that is more pairs than [`Relation::iter`] yields.
+    fn get(&self, u: usize, v: usize) -> Option<Self::Value>;
+    /// Every cell that is there, once, in this implementation's protocol.
+    fn iter(&self) -> impl Iterator<Item = (usize, usize, Self::Value)>;
+    /// The matrix of order `n` holding `entries`; every cell the stream omits
+    /// is absent.
+    fn build(n: usize, entries: impl IntoIterator<Item = (usize, usize, Self::Value)>) -> Self;
+
+    // provided
+    /// The submatrix on `p`, where vertex `i` of the result is `p[i]`.
+    fn induced(&self, p: &[usize]) -> Self {
+        Self::build(
+            p.len(),
+            Self::positions(p.len())
+                .filter_map(|(u, v)| self.get(p[u], p[v]).map(|value| (u, v, value))),
+        )
+    }
+    /// `self` with vertex `i` renamed to `p[i]`, for a permutation `p` of the
+    /// vertices.
+    fn relabelled(&self, p: &[usize]) -> Self {
+        Self::build(
+            p.len(),
+            self.iter().map(|(u, v, value)| (p[u], p[v], value)),
+        )
+    }
+}
+
+/// The pairs `(u, v)` with `u < v < n`.
+fn pairs(n: usize) -> impl Iterator<Item = (usize, usize)> {
+    (0..n).flat_map(move |v| (0..v).map(move |u| (u, v)))
+}
+
+/// The pairs `(u, v)`, `u < v`, in the order `SymNonRefl` and `AntiSym` store
+/// them, so that walking the data needs no `flat_index`.
+fn stored_pairs(len: usize) -> impl Iterator<Item = (usize, usize)> {
+    let (mut u, mut v) = (0, 1);
+    (0..len).map(move |_| {
+        let pair = (u, v);
+        u += 1;
+        if u == v {
+            u = 0;
+            v += 1;
+        }
+        pair
+    })
+}
+
+/// The pairs `(u, v)` with `u != v` and both below `n`.
+fn ordered_pairs(n: usize) -> impl Iterator<Item = (usize, usize)> {
+    (0..n).flat_map(move |v| (0..n).filter(move |&u| u != v).map(move |u| (u, v)))
+}
+
+impl Relation for SymNonRefl<bool> {
+    type Value = ();
+    fn positions(n: usize) -> impl Iterator<Item = (usize, usize)> {
+        pairs(n)
+    }
+    #[inline]
+    fn get(&self, u: usize, v: usize) -> Option<()> {
+        (u != v && self.cell(u, v)).then_some(())
+    }
+    fn iter(&self) -> impl Iterator<Item = (usize, usize, ())> {
+        stored_pairs(self.data().len())
+            .zip(self.data())
+            .filter_map(|((u, v), &present)| present.then_some((u, v, ())))
+    }
+    fn build(n: usize, entries: impl IntoIterator<Item = (usize, usize, ())>) -> Self {
+        let mut res = Self::new(false, n);
+        for (u, v, ()) in entries {
+            debug_assert!(u != v && u < n && v < n);
+            res.set_cell((u, v), true);
+        }
+        res
+    }
+    /// Moves absent cells too: the write is a no-op, and the test that would
+    /// skip it is one the branch predictor cannot call.
+    fn relabelled(&self, p: &[usize]) -> Self {
+        let mut res = Self::new(false, p.len());
+        for ((u, v), &present) in stored_pairs(self.data().len()).zip(self.data()) {
+            res.set_cell((p[u], p[v]), present);
+        }
+        res
+    }
+}
+
+impl Relation for SymNonRefl<u8> {
+    type Value = u8;
+    fn positions(n: usize) -> impl Iterator<Item = (usize, usize)> {
+        pairs(n)
+    }
+    #[inline]
+    fn get(&self, u: usize, v: usize) -> Option<u8> {
+        if u == v {
+            None
+        } else {
+            match self.cell(u, v) {
+                0 => None,
+                color => Some(color),
             }
         }
-        debug_assert_eq!(data.len(), Self::data_size(n));
-        Self::from_vec(data)
+    }
+    fn iter(&self) -> impl Iterator<Item = (usize, usize, u8)> {
+        stored_pairs(self.data().len())
+            .zip(self.data())
+            .filter_map(|((u, v), &color)| (color > 0).then_some((u, v, color)))
+    }
+    fn build(n: usize, entries: impl IntoIterator<Item = (usize, usize, u8)>) -> Self {
+        let mut res = Self::new(0, n);
+        for (u, v, color) in entries {
+            debug_assert!(u != v && u < n && v < n);
+            debug_assert!(color > 0, "0 is absence, not a colour");
+            res.set_cell((u, v), color);
+        }
+        res
+    }
+    fn relabelled(&self, p: &[usize]) -> Self {
+        let mut res = Self::new(0, p.len());
+        for ((u, v), &color) in stored_pairs(self.data().len()).zip(self.data()) {
+            res.set_cell((p[u], p[v]), color);
+        }
+        res
+    }
+}
+
+impl Relation for AntiSym<Arc> {
+    type Value = ();
+    fn positions(n: usize) -> impl Iterator<Item = (usize, usize)> {
+        ordered_pairs(n)
+    }
+    #[inline]
+    fn get(&self, u: usize, v: usize) -> Option<()> {
+        if u == v {
+            None
+        } else {
+            matches!(self.cell(u, v), Arc::Edge | Arc::Reciprocal).then_some(())
+        }
+    }
+    fn iter(&self) -> impl Iterator<Item = (usize, usize, ())> {
+        stored_pairs(self.data().len())
+            .zip(self.data())
+            .flat_map(|((u, v), &arc)| {
+                let (forward, backward) = match arc {
+                    Arc::Edge => (true, false),
+                    Arc::BackEdge => (false, true),
+                    Arc::Reciprocal => (true, true),
+                    Arc::None => (false, false),
+                };
+                [
+                    forward.then_some((u, v, ())),
+                    backward.then_some((v, u, ())),
+                ]
+            })
+            .flatten()
+    }
+    fn build(n: usize, entries: impl IntoIterator<Item = (usize, usize, ())>) -> Self {
+        let mut res = Self::new(Arc::None, n);
+        for (u, v, ()) in entries {
+            debug_assert!(u != v && u < n && v < n);
+            // `cell` is oriented: this is the arc `u -> v`.
+            let merged = match res.cell(u, v) {
+                Arc::None => Arc::Edge,
+                Arc::BackEdge => Arc::Reciprocal,
+                already => already,
+            };
+            res.set_cell((u, v), merged);
+        }
+        res
+    }
+    /// One `Arc` answers for both directions, so the cells can be gathered
+    /// whole. Order matters: reading the pair as `(p[j], p[i])` reverses it.
+    fn induced(&self, p: &[usize]) -> Self {
+        let mut res = Self::new(Arc::None, p.len());
+        for (j, &pj) in p.iter().enumerate() {
+            for (i, &pi) in p[..j].iter().enumerate() {
+                res.set_cell((i, j), self.cell(pi, pj));
+            }
+        }
+        res
+    }
+    /// Moving whole cells is half the writes of the generic fold, and no reads.
+    fn relabelled(&self, p: &[usize]) -> Self {
+        let mut res = Self::new(Arc::None, p.len());
+        for ((u, v), &arc) in stored_pairs(self.data().len()).zip(self.data()) {
+            // `set_cell` negates when `p[u] > p[v]`, and `-None` is `None`.
+            res.set_cell((p[u], p[v]), arc);
+        }
+        res
     }
 }
 
@@ -99,8 +269,6 @@ pub struct Sym<A>(Vec<A>);
 
 impl<A> FlatMatrix for Sym<A> {
     type Item = A;
-    type LineIter = Range<usize>;
-    type IndexIter = Box<dyn Iterator<Item = (usize, usize, usize)>>;
     #[inline]
     fn data_size(size: usize) -> usize {
         (size * (size + 1)) / 2
@@ -124,11 +292,6 @@ impl<A> FlatMatrix for Sym<A> {
     #[inline]
     fn from_vec(v: Vec<A>) -> Self {
         Sym(v)
-    }
-    #[inline]
-    fn line_iter(n: usize, v: usize) -> Self::LineIter {
-        debug_assert!(v <= n);
-        0..n
     }
     #[inline]
     #[allow(clippy::range_plus_one)]
@@ -157,8 +320,6 @@ pub struct SymNonRefl<A>(Vec<A>);
 
 impl<A> FlatMatrix for SymNonRefl<A> {
     type Item = A;
-    type LineIter = Chain<Range<usize>, Range<usize>>;
-    type IndexIter = Box<dyn Iterator<Item = (usize, usize, usize)>>;
 
     fn data_size(size: usize) -> usize {
         if size == 0 {
@@ -183,10 +344,6 @@ impl<A> FlatMatrix for SymNonRefl<A> {
     }
     fn from_vec(v: Vec<A>) -> Self {
         SymNonRefl(v)
-    }
-    fn line_iter(n: usize, v: usize) -> Self::LineIter {
-        debug_assert!(v <= n);
-        (0..v).chain(v + 1..n)
     }
     #[inline]
     fn halfline_iter(v: usize) -> Range<usize> {
@@ -227,8 +384,6 @@ where
     A: Neg<Output = A> + Copy,
 {
     type Item = A;
-    type LineIter = Chain<Range<usize>, Range<usize>>;
-    type IndexIter = Box<dyn Iterator<Item = (usize, usize, usize)>>;
 
     fn data_size(size: usize) -> usize {
         SymNonRefl::<A>::data_size(size)
@@ -249,11 +404,7 @@ where
     fn from_vec(v: Vec<A>) -> Self {
         AntiSym(v)
     }
-    fn line_iter(n: usize, v: usize) -> Self::LineIter {
-        debug_assert!(v <= n);
-        (0..v).chain(v + 1..n)
-    }
-    fn get(&self, i: usize, j: usize) -> A {
+    fn cell(&self, i: usize, j: usize) -> A {
         debug_assert!(i != j);
         if i < j {
             self.0[Self::flat_index_raw(i, j)]
@@ -261,7 +412,7 @@ where
             -self.0[Self::flat_index_raw(j, i)]
         }
     }
-    fn set(&mut self, (i, j): (usize, usize), v: A) {
+    fn set_cell(&mut self, (i, j): (usize, usize), v: A) {
         if i < j {
             self.0[Self::flat_index_raw(i, j)] = v
         } else {
@@ -274,168 +425,29 @@ where
     }
 }
 
-/// A trait that gives access to the list of the possible values
-/// of a type.
-pub trait Enum: Sized + 'static {
-    /// List of possible values of `Self`.
-    const VARIANTS: &'static [Self];
-    const NVARIANTS: usize;
-}
-
-impl Enum for bool {
-    const VARIANTS: &'static [Self] = &[true, false];
-    const NVARIANTS: usize = 2;
-}
-
-impl Enum for Arc {
-    const VARIANTS: &'static [Self] = &[Arc::Edge, Arc::BackEdge, Arc::None];
-    const NVARIANTS: usize = 3;
-}
-
-/// Generic trait for binary relations.
-pub trait BinRelation: Ord + Debug + Clone {
-    fn invariant(&self, v: usize) -> Vec<Vec<usize>>;
-    const INVARIANT_SIZE: usize;
-    fn induce(&self, p: &[usize]) -> Self;
-    fn empty() -> Self;
-    fn extensions(&self, n: usize) -> Vec<Self>;
-}
-
-impl<S> BinRelation for S
-where
-    S: FlatMatrix + Debug + Clone + Ord,
-    S::Item: Enum + Ord + Clone + Copy + Debug,
-{
-    fn invariant(&self, v: usize) -> Vec<Vec<usize>> {
-        let mut res: Vec<Vec<usize>> = vec![Vec::new(); S::Item::NVARIANTS];
-        let n = self.possible_size();
-        for u in Self::line_iter(n, v) {
-            let val = self.get(u, v);
-            if val != S::Item::VARIANTS[0] {
-                for (i, var) in S::Item::VARIANTS[1..].iter().enumerate() {
-                    if var == &val {
-                        res[i].push(u);
-                        break;
-                    }
-                }
-            }
-        }
-        res
-    }
-    const INVARIANT_SIZE: usize = S::Item::NVARIANTS - 1;
-    fn extensions(&self, n: usize) -> Vec<Self> {
-        assert_eq!(self.data().len(), Self::data_size(n));
-        let mut res = Vec::new();
-        let extensions_size = Self::data_size(n + 1);
-        let line_size = Self::halfline_iter(n).len();
-        let mut iter = iterators::Functions::new(line_size, S::Item::NVARIANTS);
-        while let Some(f) = iter.next() {
-            let mut data = Vec::with_capacity(extensions_size);
-            data.extend_from_slice(self.data());
-            for &variant_id in f {
-                data.push(S::Item::VARIANTS[variant_id]);
-            }
-            res.push(Self::from_vec(data));
-        }
-        res
-    }
-    fn induce(&self, p: &[usize]) -> Self {
-        self.induce0(p)
-    }
-    fn empty() -> Self {
-        Self::from_vec(Vec::new())
-    }
-}
-
-// Extension of BinRelation to small tuples: should be automatized
-// size 2
-impl<R1, R2> BinRelation for (R1, R2)
-where
-    R1: BinRelation,
-    R2: BinRelation,
-{
-    fn invariant(&self, v: usize) -> Vec<Vec<usize>> {
-        let mut res = self.0.invariant(v);
-        res.append(&mut self.1.invariant(v));
-        res
-    }
-    const INVARIANT_SIZE: usize = R1::INVARIANT_SIZE + R2::INVARIANT_SIZE;
-    fn induce(&self, p: &[usize]) -> Self {
-        (self.0.induce(p), self.1.induce(p))
-    }
-    fn empty() -> Self {
-        (R1::empty(), R2::empty())
-    }
-    fn extensions(&self, n: usize) -> Vec<Self> {
-        let e1 = self.0.extensions(n);
-        let e2 = self.1.extensions(n);
-        let mut res = Vec::new();
-        for x1 in &e1 {
-            for x2 in &e2 {
-                res.push((x1.clone(), x2.clone()))
-            }
-        }
-        res
-    }
-}
-
-// size 3
-impl<R1, R2, R3> BinRelation for (R1, R2, R3)
-where
-    R1: BinRelation,
-    R2: BinRelation,
-    R3: BinRelation,
-{
-    fn invariant(&self, v: usize) -> Vec<Vec<usize>> {
-        let mut res = self.0.invariant(v);
-        res.append(&mut self.1.invariant(v));
-        res.append(&mut self.2.invariant(v));
-        res
-    }
-    const INVARIANT_SIZE: usize = R1::INVARIANT_SIZE + R2::INVARIANT_SIZE + R3::INVARIANT_SIZE;
-    fn induce(&self, p: &[usize]) -> Self {
-        (self.0.induce(p), self.1.induce(p), self.2.induce(p))
-    }
-    fn empty() -> Self {
-        (R1::empty(), R2::empty(), R3::empty())
-    }
-    fn extensions(&self, n: usize) -> Vec<Self> {
-        let e1 = self.0.extensions(n);
-        let e2 = self.1.extensions(n);
-        let e3 = self.2.extensions(n);
-        let mut res = Vec::new();
-        for x1 in &e1 {
-            for x2 in &e2 {
-                for x3 in &e3 {
-                    res.push((x1.clone(), x2.clone(), x3.clone()))
-                }
-            }
-        }
-        res
-    }
-}
-
 /// Tests
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::Flag;
+    use crate::combinatorics::invert;
     use crate::flags::*;
+    use crate::iterators;
+    use crate::iterators::StreamingIterator;
 
+    /// `halfline_iter` names the cells of each line; `flat_index` must map
+    /// them one to one onto the data, and ignore the order of the pair.
     fn auto_test_flatmatrix<S: FlatMatrix<Item = i64>>(n: usize) {
-        println!("{}_{}", n + 1, n / 2);
-        assert_eq!(
-            S::line_iter(n + 1, n / 2).count(),
-            S::data_size(n + 1) - S::data_size(n)
-        );
-        // injectivity of line_iter
-        for u in 0..n {
-            let mut x = S::new(0, n);
-            for v in S::line_iter(n, u) {
-                assert_eq!(x.get(u, v), 0);
-                x.set((u, v), 1);
+        let mut seen = vec![false; S::data_size(n)];
+        for j in 0..n {
+            for i in S::halfline_iter(j) {
+                let k = S::flat_index(i, j);
+                assert_eq!(S::flat_index(j, i), k, "flat_index reads the order");
+                assert!(!seen[k], "two cells share the index {k}");
+                seen[k] = true;
             }
         }
+        assert!(seen.into_iter().all(|b| b), "some cell is unreachable");
     }
 
     #[test]
@@ -443,6 +455,105 @@ mod tests {
         for (size, &nb) in [1, 1, 2, 4, 11, 34].iter().enumerate() {
             assert_eq!(Graph::generate(size).len(), nb);
         }
+    }
+
+    /// Every matrix of order `n` over `alphabet`.
+    fn every_matrix<S: FlatMatrix>(n: usize, alphabet: &[S::Item]) -> Vec<S>
+    where
+        S::Item: Clone,
+    {
+        let cells = S::data_size(n);
+        (0..alphabet.len().pow(cells as u32))
+            .map(|mut code| {
+                S::from_vec(
+                    (0..cells)
+                        .map(|_| {
+                            let digit = code % alphabet.len();
+                            code /= alphabet.len();
+                            alphabet[digit].clone()
+                        })
+                        .collect(),
+                )
+            })
+            .collect()
+    }
+
+    /// The gather each flag class hand-rolled before [`Relation`].
+    fn gather<S: FlatMatrix>(m: &S, p: &[usize], empty: S::Item) -> S
+    where
+        S::Item: Clone,
+    {
+        let mut res = S::new(empty, p.len());
+        for u1 in 0..p.len() {
+            for u2 in 0..u1 {
+                res.set_cell((u1, u2), m.cell(p[u1], p[u2]));
+            }
+        }
+        res
+    }
+
+    /// Everything a protocol owes: the round trip, agreement between `get` and
+    /// `iter`, and `induced`/`relabelled` against the gather they replace.
+    fn check_protocol<S, V>(n: usize, m: &S, empty: S::Item)
+    where
+        S: Relation<Value = V> + FlatMatrix + PartialEq + Debug,
+        S::Item: Clone,
+        V: PartialEq + Debug + Copy,
+    {
+        let cells: Vec<_> = m.iter().collect();
+        assert_eq!(S::build(n, cells.clone()), *m, "round trip");
+
+        for u in 0..n {
+            assert_eq!(m.get(u, u), None, "the diagonal is never a cell");
+        }
+        let mut from_iter = cells;
+        let mut from_get: Vec<_> = S::positions(n)
+            .filter_map(|(u, v)| m.get(u, v).map(|value| (u, v, value)))
+            .collect();
+        from_iter.sort_by_key(|&(u, v, _)| (u, v));
+        from_get.sort_by_key(|&(u, v, _)| (u, v));
+        assert_eq!(from_iter, from_get, "get and iter disagree");
+
+        let mut perms = iterators::Injection::new(n, n);
+        while let Some(p) = perms.next() {
+            assert_eq!(m.induced(p), gather(m, p, empty.clone()), "induced");
+            assert_eq!(
+                m.relabelled(p),
+                gather(m, &invert(p), empty.clone()),
+                "relabelled"
+            );
+        }
+    }
+
+    #[test]
+    fn protocols() {
+        const ARCS: [Arc; 4] = [Arc::None, Arc::Edge, Arc::BackEdge, Arc::Reciprocal];
+        for n in 0..5 {
+            for m in every_matrix::<SymNonRefl<bool>>(n, &[false, true]) {
+                check_protocol(n, &m, false);
+            }
+            for m in every_matrix::<SymNonRefl<u8>>(n, &[0, 1, 2]) {
+                check_protocol(n, &m, 0);
+            }
+            for m in every_matrix::<AntiSym<Arc>>(n, &ARCS) {
+                check_protocol(n, &m, Arc::None);
+            }
+        }
+    }
+
+    /// A reciprocal pair is two cells, and `build` folds them back into one.
+    #[test]
+    fn arcs_are_one_cell_per_direction() {
+        let mut m = AntiSym::new(Arc::None, 3);
+        m.set_cell((0, 1), Arc::Edge);
+        m.set_cell((1, 2), Arc::Reciprocal);
+        assert_eq!(
+            m.iter().collect::<Vec<_>>(),
+            vec![(0, 1, ()), (1, 2, ()), (2, 1, ())]
+        );
+        let fold = |entries: Vec<(usize, usize, ())>| AntiSym::<Arc>::build(3, entries).cell(1, 2);
+        assert_eq!(fold(vec![(2, 1, ()), (1, 2, ())]), Arc::Reciprocal);
+        assert_eq!(fold(vec![(1, 2, ()), (1, 2, ())]), Arc::Edge);
     }
 
     #[test]
@@ -473,18 +584,18 @@ mod tests {
     fn antisym() {
         assert_eq!(AntiSym::new(42, 0).0.len(), 0);
         let mut rel = AntiSym::new(0, 12);
-        rel.set((5, 2), 42);
-        assert_eq!(rel.get(5, 2), 42);
-        assert_eq!(rel.get(2, 5), -42);
+        rel.set_cell((5, 2), 42);
+        assert_eq!(rel.cell(5, 2), 42);
+        assert_eq!(rel.cell(2, 5), -42);
         let n = 10;
         let mut m = AntiSym::new(0, n);
         for i in 0..n {
             for j in 0..n {
                 if i != j {
-                    let v = m.get(i, j);
+                    let v = m.cell(i, j);
                     if i < j {
                         assert_eq!(v, 0);
-                        m.set((i, j), 42)
+                        m.set_cell((i, j), 42)
                     } else {
                         assert_eq!(v, -42)
                     }
@@ -498,20 +609,10 @@ mod tests {
 
     #[test]
     fn flatmatrix_generic() {
-        auto_test_flatmatrix::<Sym<_>>(0);
-        auto_test_flatmatrix::<Sym<_>>(1);
-        auto_test_flatmatrix::<Sym<_>>(5);
-        //
-        auto_test_flatmatrix::<AntiSym<_>>(0);
-        auto_test_flatmatrix::<AntiSym<_>>(1);
-        auto_test_flatmatrix::<AntiSym<_>>(5);
-        //
-        // auto_test_flatmatrix::<NonRefl<_>>(0);
-        // auto_test_flatmatrix::<NonRefl<_>>(1);
-        // auto_test_flatmatrix::<NonRefl<_>>(5);
-        //
-        auto_test_flatmatrix::<SymNonRefl<_>>(0);
-        auto_test_flatmatrix::<SymNonRefl<_>>(1);
-        auto_test_flatmatrix::<SymNonRefl<_>>(5);
+        for n in [0, 1, 5] {
+            auto_test_flatmatrix::<Sym<_>>(n);
+            auto_test_flatmatrix::<AntiSym<_>>(n);
+            auto_test_flatmatrix::<SymNonRefl<_>>(n);
+        }
     }
 }

@@ -1,6 +1,5 @@
 //! Undirected graphs and their implementation of `Flag`.
 
-use crate::combinatorics;
 use crate::flag::{Flag, SubFlag};
 use crate::flags::common::*;
 use crate::iterators;
@@ -18,47 +17,19 @@ pub struct Graph {
     edge: SymNonRefl<bool>,
 }
 
-#[derive(Debug, Clone)]
-struct EdgeIterator<'a> {
-    g: &'a Graph,
-    u: usize,
-    v: usize,
-}
-
-impl Iterator for EdgeIterator<'_> {
-    type Item = (usize, usize);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.u += 1;
-        if self.u >= self.v {
-            self.u = 0;
-            self.v += 1;
-        }
-        debug_assert!(self.u < self.v);
-        if self.v >= self.g.size {
-            None
-        } else if self.g.edge(self.u, self.v) {
-            Some((self.u, self.v))
-        } else {
-            self.next()
-        }
-    }
-}
-
 impl Graph {
     /// Create a graph on `n` vertices with edge set `edge`.
     /// The vertices of this graph are `0,...,n-1`.
     pub fn new(n: usize, edge: &[(usize, usize)]) -> Self {
-        let mut new_edge = SymNonRefl::new(false, n);
-        for &(u, v) in edge {
-            assert!(u < n);
-            assert!(v < n);
-            new_edge[(u, v)] = true;
-        }
-        Self {
-            size: n,
-            edge: new_edge,
-        }
+        let edge = SymNonRefl::build(
+            n,
+            edge.iter().map(|&(u, v)| {
+                assert!(u < n);
+                assert!(v < n);
+                (u, v, ())
+            }),
+        );
+        Self { size: n, edge }
     }
     /// Return the number of vertices in the graph
     pub fn size(&self) -> usize {
@@ -67,13 +38,7 @@ impl Graph {
 
     /// Return the vector of vertices adjacent to `v`.
     pub fn nbrs(&self, v: usize) -> Vec<usize> {
-        let mut res = Vec::new();
-        for u in 0..self.size {
-            if u != v && self.edge.get(u, v) {
-                res.push(u);
-            }
-        }
-        res
+        (0..self.size).filter(|&u| self.edge(u, v)).collect()
     }
 
     /// Create the graph on `n` vertices with no edge.  
@@ -87,16 +52,12 @@ impl Graph {
     /// Returns `true` id `uv` is an edge.
     #[inline]
     pub fn edge(&self, u: usize, v: usize) -> bool {
-        u != v && self.edge[(u, v)]
+        self.edge.get(u, v).is_some()
     }
     /// Returns an iterator on edges.
     /// The edges are represented as couples `(u, v)` with `u < v`.
-    pub fn edges(&self) -> impl Iterator<Item = (usize, usize)> + '_ {
-        EdgeIterator {
-            g: self,
-            u: 0,
-            v: 0,
-        }
+    pub fn edges(&self) -> impl Iterator<Item = (usize, usize)> {
+        self.edge.iter().map(|(u, v, ())| (u, v))
     }
 
     /// Returns `true` if the graph is connected.
@@ -137,29 +98,32 @@ impl Canonize for Graph {
     }
     fn invariant_neighborhood(&self, v: usize) -> impl Iterator<Item = (usize, u64)> {
         assert!(v < self.size);
+        // `cell`, not `get`: the hottest read in the library, and `u != v` is
+        // already tested here.
         (0..self.size)
-            .filter(move |&u| u != v && self.edge.get(u, v))
+            .filter(move |&u| u != v && self.edge.cell(u, v))
             .map(|u| (u, 1))
     }
     fn apply_morphism(&self, p: &[usize]) -> Self {
-        self.induce(&combinatorics::invert(p))
+        Self {
+            size: self.size,
+            edge: self.edge.relabelled(p),
+        }
     }
 }
 
 impl Flag for Graph {
     fn induce(&self, p: &[usize]) -> Self {
         debug_assert!(p.iter().all(|&i| { i < self.size }));
-        let k = p.len();
-        let mut res = Self::empty(k);
-        for u1 in 0..k {
-            for u2 in 0..u1 {
-                res.edge[(u1, u2)] = self.edge[(p[u1], p[u2])];
-            }
+        Self {
+            size: p.len(),
+            edge: self.edge.induced(p),
         }
-        res
     }
 
-    const NAME: &'static str = "Graph";
+    fn name() -> String {
+        "Graph".into()
+    }
 
     fn size_zero_flags() -> Vec<Self> {
         vec![Self::empty(0)]
@@ -226,7 +190,9 @@ impl Graph {
 pub enum Connected {}
 
 impl SubFlag<Graph> for Connected {
-    const SUBCLASS_NAME: &'static str = "Connected graph";
+    fn subclass_name() -> String {
+        "Connected graph".into()
+    }
 
     const HEREDITARY: bool = false;
 

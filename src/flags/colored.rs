@@ -66,9 +66,9 @@ where
         res
     }
 
-    // FIXME: Incorrect name because of limitation of consts in Rusts
-    // Should be 'fmt("{}-colored {}", N, F::NAME'
-    const NAME: &'static str = "FIXME";
+    fn name() -> String {
+        format!("{N}-colored {}", F::name())
+    }
     const HEREDITARY: bool = F::HEREDITARY;
 }
 
@@ -102,7 +102,36 @@ where
 mod tests {
     use super::*;
     use crate::flags::Graph;
+    use crate::operator::{Basis, Savable};
     use canonical_form::Canonize;
+
+    /// Every `Colored` class used to report the name "FIXME", so all of them
+    /// shared one memoization directory and silently served each other's flag
+    /// lists. Names must distinguish both the colour count and the base class.
+    #[test]
+    fn colored_names_are_distinct() {
+        assert_eq!(<Colored<Graph, 2> as Flag>::name(), "2-colored Graph");
+        assert_eq!(<Colored<Graph, 3> as Flag>::name(), "3-colored Graph");
+        assert_eq!(
+            <Colored<Colored<Graph, 2>, 3> as Flag>::name(),
+            "3-colored 2-colored Graph"
+        );
+    }
+
+    /// The cached bases must agree with `generate`, which never reads the cache.
+    #[test]
+    fn colored_bases_are_not_shared() {
+        for size in 0..3 {
+            assert_eq!(
+                Basis::<Colored<Graph, 2>>::new(size).get(),
+                <Colored<Graph, 2> as Flag>::generate(size)
+            );
+            assert_eq!(
+                Basis::<Colored<Graph, 3>>::new(size).get(),
+                <Colored<Graph, 3> as Flag>::generate(size)
+            );
+        }
+    }
     #[test]
     fn test_colored() {
         type G2 = Colored<Graph, 2>;

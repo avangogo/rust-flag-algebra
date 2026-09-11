@@ -502,7 +502,9 @@ where
 impl<N, F: Flag> Expr<N, F> {
     pub fn map<Fun, M>(&self, f: &Fun) -> Expr<M, F>
     where
-        Fun: Fn(&N) -> M,
+        Fun: Fn(&N) -> M + Clone + 'static,
+        N: 'static,
+        M: 'static,
     {
         let rec = |e: &Self| Rc::new(e.map(f));
 
@@ -512,7 +514,10 @@ impl<N, F: Flag> Expr<N, F> {
             Neg(e) => Neg(rec(e)),
             Unlab(e) => Unlab(rec(e)),
             Named(e, name, latex) => Named(rec(e), name.clone(), *latex),
-            FromFunction(_g, b) => FromFunction(Rc::new(|_, _| unimplemented!()), *b), // Fixme
+            FromFunction(g, b) => {
+                let (g, f) = (g.clone(), f.clone());
+                FromFunction(Rc::new(move |flag, size| f(&g(flag, size))), *b)
+            }
             FromIndicator(g, b) => FromIndicator(g.clone(), *b),
             Var(i) => Var(*i),
             Flag(id, b) => Flag(*id, *b),

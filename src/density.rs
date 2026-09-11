@@ -103,11 +103,6 @@ pub fn unlabeling_tabulate<F: Flag>(
     let mut res = Vec::new();
     for flag in input_vec {
         let unlabeled = flag.select_type(eta).canonical_typed(type_size);
-        // FIXME
-        if type_size == 0 {
-            debug_assert_eq!(unlabeled, unlabeled.canonical_typed(0));
-            debug_assert_eq!(unlabeled, unlabeled.canonical());
-        }
         res.push(
             output_vec
                 .binary_search(&unlabeled)
@@ -239,6 +234,20 @@ mod tests {
     use super::*;
     use crate::flags::*;
     use canonical_form::Canonize;
+
+    /// `unlabeling_tabulate` looks flags up in a basis of untyped flags after
+    /// calling `canonical_typed(0)` on them, so that must agree with `canonical()`.
+    #[test]
+    fn canonical_typed_zero_is_canonical() {
+        fn check<F: Flag>(n: usize) {
+            for f in F::generate(n) {
+                assert_eq!(f, f.canonical());
+                assert_eq!(f.canonical_typed(0), f.canonical());
+            }
+        }
+        check::<Graph>(4);
+        check::<OrientedGraph>(3);
+    }
 
     /// Returns the number of induced subflags of `g` isomorphic to `f`,
     /// considered with type of size `type_size`.

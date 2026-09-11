@@ -103,6 +103,7 @@ pub use crate::operator::{Basis, Savable, Type};
 
 mod expr;
 pub use crate::problem::sdp::Problem;
+pub use crate::problem::sdpa::Outcome;
 pub use crate::tools::FlagSolver;
 
 mod flag;

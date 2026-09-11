@@ -30,7 +30,6 @@ failure_derive = "0.1.8"
 arrayvec = "0.7.6"
 log = "0.4.28"
 thiserror = "2.0"
-const_format = "0.2.36"
 flate2 = "1.1.9"
 
 [dev-dependencies]

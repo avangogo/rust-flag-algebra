@@ -1,13 +1,12 @@
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader, BufWriter, Write};
-use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::result::Result;
 
 use log::*;
 
-use crate::problem::sdpa::{Error, SdpaCoeff};
+use crate::problem::sdpa::{Error, Outcome, SdpaCoeff};
 
 const CS_COST: f64 = 100.;
 const INEQ_COST: f64 = 1.;
@@ -47,9 +46,9 @@ impl SdpaProblem {
         }
         Ok(())
     }
+    /// Read a problem from the file `filename`, as written by
+    /// [`SdpaProblem::write`].
     pub fn load(filename: &str) -> Result<Self, Error> {
-        let mut filename = PathBuf::from(filename);
-        let _ = filename.set_extension("sdpa");
         let buf = BufReader::new(File::open(filename)?);
         let mut lines = buf.lines().map(|line| line.unwrap()).filter(|line| {
             let l = line.trim_start();
@@ -109,8 +108,6 @@ pub struct SdpaCertificate {
 
 impl SdpaCertificate {
     pub fn write(&self, filename: &str) -> Result<(), io::Error> {
-        let filename = PathBuf::from(filename);
-        //let _ = filename.set_extension("cert.sdpa");
         let mut w = BufWriter::new(File::create(filename)?);
         for v in &self.y {
             write!(w, "{v} ")?;
@@ -176,8 +173,8 @@ impl SdpaCertificate {
     }
 }
 
-/// Run csdp and parse its output
-pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error> {
+/// Run csdp and read its verdict
+pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<Outcome, Error> {
     let mut command = Command::new("csdp");
     let _ = command.arg(filename).arg(certificate_filename(filename));
     if let Some(sol) = initial_solution {
@@ -214,28 +211,15 @@ pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error
                 debug!("{line}")
             }
         } else {
+            info!("{line}");
+            let mut tail = vec![line];
+            tail.extend(lines.map_while(Result::ok));
             let code = child
                 .wait()
                 .expect("csdp wasn't running")
                 .code()
                 .expect("No exit code");
-            if code == 0 {
-                let value: f64 = lines
-                    .next()
-                    .unwrap()
-                    .unwrap()
-                    .split_whitespace()
-                    .nth(3)
-                    .unwrap()
-                    .parse()
-                    .unwrap();
-                info!("{line} with primal value {value}");
-                return Ok(value);
-            } else {
-                info!("{line}");
-                assert!(code <= 10, "{command:?} aborted with code {code}");
-                return Err(Error::SdpNotSolved(code));
-            }
+            return Outcome::from_csdp(code, &tail);
         }
     }
     let _ = child.wait().unwrap();
@@ -245,8 +229,11 @@ pub fn csdp(filename: &str, initial_solution: Option<&str>) -> Result<f64, Error
 pub fn csdp_minimize_certificate(
     filename: &str,
     initial_solution: Option<&str>,
-) -> Result<f64, Error> {
-    let val = csdp(filename, initial_solution)?;
+) -> Result<Outcome, Error> {
+    let outcome = csdp(filename, initial_solution)?;
+    let Some(val) = outcome.value() else {
+        return Ok(outcome);
+    };
     let problem = SdpaProblem::load(filename)?.to_certificate_minimization(val);
     let cert = SdpaCertificate::load(&certificate_filename(filename))?
         .to_certificate_minimization(&problem);
@@ -266,7 +253,7 @@ pub fn csdp_minimize_certificate(
             warn!("Cannot minimize certificate");
         }
     }
-    Ok(val)
+    Ok(outcome)
 }
 
 impl SdpaCoeff {

@@ -1,5 +1,4 @@
 //! `[OrientedGraph]`s and their flag implementation.
-use crate::combinatorics;
 use crate::flag::{Flag, SubClass, SubFlag};
 use crate::flags::common::*;
 use crate::iterators::{Functions, StreamingIterator};
@@ -67,12 +66,12 @@ impl DirectedGraph {
         let mut new_edge = AntiSym::new(None, n);
         for (u, v) in arcs {
             check_arc((u, v), n);
-            let new_arc = match new_edge.get(u, v) {
+            let new_arc = match new_edge.cell(u, v) {
                 None => Edge,
                 BackEdge => Reciprocal,
                 _ => panic!("Arc ({u}, {v}) specified twice"),
             };
-            new_edge.set((u, v), new_arc);
+            new_edge.set_cell((u, v), new_arc);
         }
         Self {
             size: n,
@@ -92,7 +91,7 @@ impl DirectedGraph {
     pub fn out_nbrs(&self, v: usize) -> Vec<usize> {
         let mut res = Vec::new();
         for u in 0..self.size {
-            if u != v && matches!(self.edge.get(u, v), BackEdge | Reciprocal) {
+            if u != v && matches!(self.edge.cell(u, v), BackEdge | Reciprocal) {
                 res.push(u);
             }
         }
@@ -107,7 +106,7 @@ impl DirectedGraph {
     pub fn in_nbrs(&self, v: usize) -> Vec<usize> {
         let mut res = Vec::new();
         for u in 0..self.size {
-            if u != v && matches!(self.edge.get(u, v), Edge | Reciprocal) {
+            if u != v && matches!(self.edge.cell(u, v), Edge | Reciprocal) {
                 res.push(u);
             }
         }
@@ -124,7 +123,7 @@ impl DirectedGraph {
     /// ```
     pub fn arc(&self, u: usize, v: usize) -> Arc {
         check_arc((u, v), self.size);
-        self.edge.get(u, v)
+        self.edge.cell(u, v)
     }
 }
 
@@ -159,10 +158,10 @@ impl OrientedGraph {
         for (u, v) in arcs {
             check_arc((u, v), n);
             assert!(
-                new_edge.get(u, v) == None,
+                new_edge.cell(u, v) == None,
                 "Pair {{{u}, {v}}} specified twice"
             );
-            new_edge.set((u, v), Edge);
+            new_edge.set_cell((u, v), Edge);
         }
         Self(DirectedGraph {
             size: n,
@@ -233,7 +232,7 @@ impl OrientedGraph {
         let mut edge = self.0.edge.clone();
         edge.resize(n + 1, None);
         for v in 0..n {
-            edge.set((v, n), Edge);
+            edge.set_cell((v, n), Edge);
         }
         Self(DirectedGraph { edge, size: n + 1 })
     }
@@ -245,7 +244,7 @@ impl fmt::Display for DirectedGraph {
         for u in 0..self.size {
             for v in 0..self.size {
                 if v != u {
-                    match self.edge.get(u, v) {
+                    match self.edge.cell(u, v) {
                         Edge => write!(f, " {u}->{v}")?,
                         Reciprocal if u < v => write!(f, " {u}<->{v}")?,
                         _ => (),
@@ -287,11 +286,14 @@ impl Canonize for DirectedGraph {
     fn invariant_neighborhood(&self, v: usize) -> impl Iterator<Item = (usize, u64)> {
         (0..self.size)
             .filter(move |&u| u != v)
-            .map(move |u| (u, self.edge.get(u, v) as u64))
+            .map(move |u| (u, self.edge.cell(u, v) as u64))
             .filter(|(_, weight)| *weight > 0)
     }
     fn apply_morphism(&self, p: &[usize]) -> Self {
-        self.induce(&combinatorics::invert(p))
+        Self {
+            size: self.size,
+            edge: self.edge.relabelled(p),
+        }
     }
 }
 
@@ -309,17 +311,15 @@ impl Canonize for OrientedGraph {
 
 impl Flag for DirectedGraph {
     fn induce(&self, p: &[usize]) -> Self {
-        let k = p.len();
-        let mut res = Self::new(k, []);
-        for u1 in 0..k {
-            for u2 in 0..u1 {
-                res.edge.set((u1, u2), self.edge.get(p[u1], p[u2]));
-            }
+        Self {
+            size: p.len(),
+            edge: self.edge.induced(p),
         }
-        res
     }
 
-    const NAME: &'static str = "DirectedGraph";
+    fn name() -> String {
+        "DirectedGraph".into()
+    }
 
     fn size_zero_flags() -> Vec<Self> {
         vec![Self::new(0, [])]
@@ -341,7 +341,7 @@ fn extend<F: Fn(usize) -> Arc>(g: &DirectedGraph, f: F) -> DirectedGraph {
     let n = g.size;
     edge.resize(n + 1, None);
     for v in 0..n {
-        edge.set((v, n), f(v));
+        edge.set_cell((v, n), f(v));
     }
     DirectedGraph { size: n + 1, edge }
 }
@@ -351,7 +351,9 @@ impl Flag for OrientedGraph {
         Self(self.0.induce(p))
     }
 
-    const NAME: &'static str = "OrientedGraph";
+    fn name() -> String {
+        "OrientedGraph".into()
+    }
 
     fn size_zero_flags() -> Vec<Self> {
         vec![Self::empty(0)]
@@ -375,7 +377,9 @@ impl Flag for OrientedGraph {
 pub enum TriangleFree {}
 
 impl SubFlag<OrientedGraph> for TriangleFree {
-    const SUBCLASS_NAME: &'static str = "Triangle-free oriented graph";
+    fn subclass_name() -> String {
+        "Triangle-free oriented graph".into()
+    }
 
     fn is_in_subclass(flag: &OrientedGraph) -> bool {
         flag.is_triangle_free()

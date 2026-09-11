@@ -39,7 +39,7 @@ pub fn solve_and_read_certificate() {
 
     problem.write_sdpa(&file).unwrap();
     let result = problem.run_csdp(&file, None, false).unwrap();
-    assert_eq!(result, 0.25);
+    assert_eq!(result.value(), Some(0.25));
 
     let certificate = SdpaCertificate::load(&certificate_file).unwrap();
 
@@ -59,4 +59,19 @@ pub fn turan_with_csdp() {
     let temp_dir = tempfile::tempdir().unwrap();
     let file = format!("{}/es_e2e", temp_dir.path().to_str().unwrap());
     assert_eq!(problem.solve_csdp(&file).unwrap(), -0.5);
+}
+
+/// Exit code 2 is the verdict that used to be indistinguishable from "the
+/// solver gave up": both arrived as `Err(SdpNotSolved)`.
+#[test]
+pub fn dual_infeasible_is_a_verdict() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let file = format!("{}/dual_infeasible.sdpa", temp_dir.path().to_str().unwrap());
+    // Maximize an unbounded X_11 subject to X_22 = 0.
+    std::fs::write(&file, "1\n1\n2\n0.0\n0 1 1 1 1.0\n1 1 2 2 1.0\n").unwrap();
+
+    assert_eq!(
+        flag_algebra::tools::csdp(&file, None).unwrap(),
+        Outcome::DualInfeasible
+    );
 }

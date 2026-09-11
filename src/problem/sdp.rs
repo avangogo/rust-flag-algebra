@@ -115,26 +115,32 @@ where
         self.obj = self.obj.no_scale();
         self
     }
-    /// Solve the sdp using the CSDP solver.
+    /// Solve the sdp using the CSDP solver, and return its optimum.
+    ///
+    /// Every verdict other than an optimum is an error here; use
+    /// [`Problem::run_csdp`] to tell them apart.
     pub fn solve_csdp(&self, filename: &str) -> Result<f64, Error> {
         self.write_sdpa(filename)?;
-        self.run_csdp(filename, None, false)
+        let outcome = self.run_csdp(filename, None, false)?;
+        match outcome.value() {
+            Some(value) => Ok(value),
+            None => Err(Error::NotSolved(outcome)),
+        }
     }
+    /// Solve the sdp using the CSDP solver, and return what it concluded.
     pub fn run_csdp(
         &self,
         name: &str,
         initial_solution: Option<&str>,
         minimize_certificate: bool,
-    ) -> Result<f64, Error> {
-        let filename = format!("{name}.sdpa");
-        match if minimize_certificate {
+    ) -> Result<Outcome, Error> {
+        let filename = write_csdp::sdpa_filename(name);
+        let outcome = if minimize_certificate {
             csdp_minimize_certificate(&filename, initial_solution)
         } else {
             csdp(&filename, initial_solution)
-        } {
-            Ok(v) => Ok(v / self.obj.scale as f64),
-            e => e,
-        }
+        }?;
+        Ok(outcome.scaled(self.obj.scale as f64))
     }
 }
 
@@ -311,11 +317,23 @@ impl<'a, N, F: Flag> IneqSelect<'a, N, F> {
 type Id = (usize, CSMode);
 
 impl Selector {
+    /// Select every inequality and every Cauchy-Schwarz constraint of `prob`,
+    /// splitting each Cauchy-Schwarz block into its invariant and anti-invariant
+    /// parts (see [`Self::variant_reduced`]).
+    ///
+    /// This is the selector used by [`Problem::write_sdpa`].
     pub fn new<N, F: Flag>(prob: &Problem<N, F>) -> Self {
+        Self::whole_blocks(prob).variant_reduced(prob)
+    }
+    /// Select every inequality and every Cauchy-Schwarz constraint of `prob`,
+    /// keeping each Cauchy-Schwarz block whole.
+    ///
+    /// Use this in place of [`Self::new`] to opt out of the symmetry reduction,
+    /// for instance to check that the reduction preserves the optimum.
+    pub fn whole_blocks<N, F: Flag>(prob: &Problem<N, F>) -> Self {
         let mut simple = ArrayVec::new();
-        simple.push(Simple); //FIXME
-        //simple.push(Invariant);
-        (Self {
+        simple.push(Simple);
+        Self {
             ineqs: prob
                 .ineqs
                 .iter()
@@ -323,8 +341,7 @@ impl Selector {
                 .collect(),
             cs: vec![simple; prob.cs.len()],
             cs_subspace: prob.cs.iter().map(Subspace::new).collect(), // Can be expensive
-        })
-        .variant_reduced(prob) // FIXME
+        }
     }
     pub fn variant_reduced<N, F>(mut self, problem: &Problem<N, F>) -> Self
     where
