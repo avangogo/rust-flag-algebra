@@ -42,7 +42,7 @@ where
     /// Path to the corresponding file.
     fn file_path(&self) -> PathBuf {
         let mut filename = PathBuf::from("./data");
-        filename.push(Path::new(F::NAME));
+        filename.push(F::name());
         filename.push(self.filename());
         let _ = filename.set_extension("dat");
         filename

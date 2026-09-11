@@ -7,7 +7,7 @@ type V = QFlag<N, F>;
 
 // Parameters
 const FLAG_SIZE: usize = 5; // Size of the flags used // can be pushed to 6
-const C: f64 = 0.331; // Constant for which we prove the result
+const C: f64 = 0.342; // Constant for which we prove the result
 const C1: f64 = C; // Constant for which we know it holds
 
 pub fn main() {

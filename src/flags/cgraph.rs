@@ -1,13 +1,11 @@
 //! Example of flags: Graphs.
 
-use crate::combinatorics;
 use crate::flag::{Flag, SubClass};
 use crate::flags::Colored;
 use crate::flags::common::*;
 use crate::iterators;
 use crate::iterators::StreamingIterator;
 use canonical_form::Canonize;
-use const_format::concatcp;
 use std::fmt;
 use std::fmt::Debug;
 
@@ -24,12 +22,12 @@ pub struct CGraph<const K: u8> {
 impl<const K: u8> CGraph<K> {
     /// Returns `true` if `uv` is an edge.
     pub fn is_edge(&self, u: usize, v: usize) -> bool {
-        u != v && self.edge[(u, v)] > 0
+        self.edge.get(u, v).is_some()
     }
     /// Return the color of an edge `uv`.
-    /// Returns `0` if there is no edge.
+    /// Returns `0` if there is no edge, `u == v` included.
     pub fn edge(&self, u: usize, v: usize) -> u8 {
-        self.edge[(u, v)]
+        self.edge.get(u, v).unwrap_or(0)
     }
     /// Return the vector of vertices adjacent to `v`.
     pub fn nbrs(&self, v: usize) -> Vec<usize> {
@@ -86,44 +84,33 @@ impl<const K: u8> Canonize for CGraph<K> {
     }
     fn invariant_neighborhood(&self, v: usize) -> impl Iterator<Item = (usize, u64)> {
         assert!(v < self.size);
+        // `cell`, not `get`: the hottest read in the library, and `u != v` is
+        // already tested here.
         (0..self.size())
             .filter(move |&u| u != v)
-            .map(move |u| (u, self.edge[(u, v)] as u64))
+            .map(move |u| (u, self.edge.cell(u, v) as u64))
             .filter(|(_, weight)| *weight > 0)
     }
 
     fn apply_morphism(&self, p: &[usize]) -> Self {
-        self.induce(&combinatorics::invert(p))
+        Self {
+            size: self.size,
+            edge: self.edge.relabelled(p),
+        }
     }
-}
-
-macro_rules! name {
-    ($i:expr) => {
-        concatcp!("CGraph_", $i)
-    };
 }
 
 impl<const K: u8> Flag for CGraph<K> {
     fn induce(&self, p: &[usize]) -> Self {
         Self {
             size: p.len(),
-            edge: self.edge.induce0(p),
+            edge: self.edge.induced(p),
         }
     }
 
-    // Hack to avoid current limitation in rust consts (FIXME)
-    // Should be 'concat("CGraph_", K)'
-    const NAME: &'static str = [
-        name!(0u8),
-        name!(1u8),
-        name!(2u8),
-        name!(3u8),
-        name!(4u8),
-        name!(5u8),
-        name!(6u8),
-        name!(7u8),
-        name!(8u8),
-    ][K as usize];
+    fn name() -> String {
+        format!("CGraph_{K}")
+    }
 
     fn size_zero_flags() -> Vec<Self> {
         vec![Self::empty(0)]
@@ -186,6 +173,24 @@ impl<A, const K: u8, const N: u8> SubClass<Colored<CGraph<K>, N>, A> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn name_is_not_capped() {
+        assert_eq!(<CGraph<3> as Flag>::name(), "CGraph_3");
+        // The old macro array only had entries for K <= 8.
+        assert_eq!(<CGraph<12> as Flag>::name(), "CGraph_12");
+    }
+
+    /// `edge(v, v)` used to read the first cell of the next row: here it
+    /// answered 2 for `edge(1, 1)`, and `edge(3, 3)` panicked.
+    #[test]
+    fn the_diagonal_is_not_an_edge() {
+        let g = CGraph::<3>::new(4, &[((0, 1), 1), ((0, 2), 2)]);
+        for v in 0..4 {
+            assert_eq!(g.edge(v, v), 0);
+            assert!(!g.is_edge(v, v));
+        }
+    }
 
     #[test]
     fn new_unit() {

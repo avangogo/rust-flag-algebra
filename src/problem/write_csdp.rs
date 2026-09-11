@@ -87,7 +87,7 @@ fn format_count((count, max): (usize, usize)) -> String {
 /// Write a description of the problem
 fn get_info<N: Clone, F: Flag>(view: &ProblemView<'_, N, F>) -> ProblemInfo<N, F> {
     ProblemInfo {
-        flag_name: F::NAME,
+        flag_name: F::name(),
         basis: view.obj.basis,
         n_flags: view.obj.basis.get().len(),
         n_selected_ineqs: (
@@ -163,13 +163,21 @@ where
     Ok(())
 }
 
-/// Write the semi-definite program in the file `filename` in the sdpa format.
+/// The file holding the program of the problem named `name`.
+///
+/// Always appends: the argument names the problem, not the file, and
+/// `Path::set_extension` would turn `sweep0.3333` into `sweep0.sdpa`.
+pub(crate) fn sdpa_filename(name: &str) -> String {
+    format!("{name}.sdpa")
+}
+
+/// Write the semi-definite program of `view` in the sdpa format, in the file
+/// [`sdpa_filename`] of `filename`.
 pub fn write_sdpa<N, F: Flag>(view: &ProblemView<'_, N, F>, filename: &str) -> io::Result<()>
 where
     N: Display + Neg<Output = N> + Zero + Copy + PartialEq,
 {
-    let mut filename = PathBuf::from(filename);
-    let _ = filename.set_extension("sdpa");
+    let filename = PathBuf::from(sdpa_filename(filename));
     info!("Writing problem in {}", filename.display());
     let mut file = BufWriter::new(File::create(&filename)?);
     let info = get_info(view);
@@ -243,4 +251,18 @@ where
         write_matrix(&mut file, mat_num, block_offset + block_num, *matrix)?
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `Path::set_extension` used to write the program of `sweep0.3333` into
+    /// `sweep0.sdpa`, while `Problem::run_csdp` looked for `sweep0.3333.sdpa`.
+    #[test]
+    fn a_dot_in_the_name_is_not_an_extension() {
+        assert_eq!(sdpa_filename("sweep0.3333"), "sweep0.3333.sdpa");
+        assert_eq!(sdpa_filename("goodman"), "goodman.sdpa");
+        assert_eq!(sdpa_filename("dir.d/c5-free"), "dir.d/c5-free.sdpa");
+    }
 }

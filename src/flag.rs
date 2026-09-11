@@ -18,7 +18,7 @@ use std::marker::PhantomData;
 /// reduction modulo isomorphism.
 pub trait Flag
 where
-    Self: Canonize + Debug + Display + Serialize + DeserializeOwned,
+    Self: Canonize + Debug + Display + Serialize + DeserializeOwned + 'static,
 {
     /// Returns the subflag induced by the vertices in the slice `set`.
     fn induce(&self, set: &[usize]) -> Self;
@@ -32,8 +32,12 @@ where
     /// This list can have redundancy and is a priori not reduced modulo isomorphism.    
     fn superflags(&self) -> Vec<Self>;
     /// A unique name for this type of flags. For instance "Graph".
-    /// This nameis used for naming the associated data subdirectory.
-    const NAME: &'static str;
+    ///
+    /// This name is used for naming the associated data subdirectory, so it
+    /// must differ between any two flag classes that can coexist in a program:
+    /// two classes sharing a name would silently share (and corrupt) each
+    /// other's memoized operators.
+    fn name() -> String;
 
     // caracteristic
     /// Setting this parameter to `false` deactivate checks that induced subflags exists.
@@ -207,7 +211,7 @@ impl<F: Flag, A> Ord for SubClass<F, A> {
 /// // We want `SubClass<Graph, TriangleFree>` to be a subclass of `Graph`.
 /// // This is done by implementing `SubFlag<Graph>` for `TriangleFree`.
 /// impl SubFlag<Graph> for TriangleFree {
-///     const SUBCLASS_NAME: &'static str = "Triangle-free graph for the example";
+///     fn subclass_name() -> String { "Triangle-free graph for the example".into() }
 ///
 ///     // Compute if the graph is triangle-free.
 ///     fn is_in_subclass(g: &Graph) -> bool {
@@ -237,7 +241,7 @@ where
 
     /// Unique name for the subclass.
     /// This is used for naming the memoization directory.
-    const SUBCLASS_NAME: &'static str;
+    fn subclass_name() -> String;
 
     const HEREDITARY: bool = F::HEREDITARY;
 }
@@ -263,10 +267,12 @@ where
 
 impl<F, A> Flag for SubClass<F, A>
 where
-    A: SubFlag<F>,
+    A: SubFlag<F> + 'static,
     F: Flag,
 {
-    const NAME: &'static str = A::SUBCLASS_NAME;
+    fn name() -> String {
+        A::subclass_name()
+    }
 
     const HEREDITARY: bool = A::HEREDITARY;
 

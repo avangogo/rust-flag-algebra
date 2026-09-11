@@ -2,7 +2,6 @@
 
 use crate::flag::Flag;
 use crate::problem::sdp::*;
-use crate::problem::sdpa;
 use crate::tools::*;
 use log::*;
 use sprs::CsMat;
@@ -55,8 +54,7 @@ where
             Some(select) => {
                 self.select_certificate_file = Some(select);
                 match self.pb.run_csdp(&self.name, None, false) {
-                    Ok(v) => Ok(v),
-                    Err(sdpa::Error::SdpNotSolved(_)) => Err(()),
+                    Ok(outcome) => outcome.value().ok_or(()),
                     Err(e) => panic!("Failed to run csdp {e}"),
                 }
             }

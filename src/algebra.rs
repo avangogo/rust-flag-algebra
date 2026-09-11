@@ -416,7 +416,9 @@ impl<N, F: Flag> QFlag<N, F> {
     }
     pub fn map<G, M>(&self, g: G) -> QFlag<M, F>
     where
-        G: Fn(&N) -> M,
+        G: Fn(&N) -> M + Clone + 'static,
+        N: 'static,
+        M: 'static,
     {
         QFlag {
             basis: self.basis,
@@ -706,6 +708,21 @@ where
             data: self.data.into_iter().map(|x| x.opposite()).collect(),
         }
     }
+    /// Whether this set was turned into equalities by [`Self::equality`].
+    #[must_use]
+    pub fn is_equality(&self) -> bool {
+        self.meta.equality
+    }
+    /// Number of inequalities in the set.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+    /// Whether the set contains no inequality.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
     /// If self is "`f ≥ x`", returns "`f = x`".
     pub fn equality(mut self) -> Self {
         self.meta.equality = true;
@@ -872,6 +889,16 @@ mod tests {
             expr: Expr::Zero,
         };
         assert_eq!(qflag.clone().no_scale(), qflag)
+    }
+    /// `Expr::map` used to replace a `FromFunction` node with a closure that
+    /// panicked on evaluation, so a mapped vector could not be re-evaluated
+    /// from its own expression.
+    #[test]
+    fn test_map_preserves_functions() {
+        let b = Basis::<Graph>::new(3);
+        let v: QFlag<i64, _> = b.qflag_from_coeff(|g, _| g.edges().count() as i64);
+        let w: QFlag<f64, _> = v.map(|x| *x as f64);
+        assert_eq!(w, w.expr.eval());
     }
     #[test]
     fn test_qflag_pows() {
